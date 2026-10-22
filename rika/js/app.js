@@ -203,6 +203,14 @@
     sheet.classList.remove('hidden');
     $('.close', sheet).onclick = closeSheet;
   }
+  // ブラウザの confirm() が使えない環境でも動くよう、確認はシートで行う
+  function ask(html, okLabel, onOk) {
+    openSheet(`<div class="ask"><p>${html}</p><div class="ask-btns">
+      <button class="btn" id="ask-no">キャンセル</button>
+      <button class="btn danger-fill" id="ask-ok">${esc(okLabel)}</button></div></div>`);
+    $('#ask-no').onclick = closeSheet;
+    $('#ask-ok').onclick = () => { closeSheet(); onOk(); };
+  }
   function closeSheet() { sheet.classList.add('hidden'); sheet.innerHTML = ''; }
   sheet.addEventListener('click', e => { if (e.target === sheet) closeSheet(); });
 
@@ -253,8 +261,8 @@
   }
   function bindQuit() {
     $('#quit').onclick = () => {
-      if (session.results.length && !confirm('とちゅうでやめますか？（ここまでの結果は記録されています）')) return;
-      go(current);
+      if (!session.results.length) return go(current);
+      ask('とちゅうでやめますか？<br><small class="muted">ここまでの結果は記録されています</small>', 'やめる', () => go(current));
     };
   }
   function renderQuestion() {
@@ -458,8 +466,9 @@
     $$('.tbl tbody tr').forEach(tr => tr.onclick = () => { go('home'); openUnit(tr.dataset.unit); });
     $('#snd').onchange = e => { S.settings.sound = e.target.checked; save(); };
     $('#reset').onclick = () => {
-      if (!confirm('すべての学習記録を消去します。よろしいですか？')) return;
-      S = fresh(); save(); toast('記録をリセットしました'); renderRecord();
+      ask('すべての学習記録を消去します。<br>元にはもどせません。', '消去する', () => {
+        S = fresh(); save(); closeSheet(); toast('記録をリセットしました'); renderRecord();
+      });
     };
   }
 
