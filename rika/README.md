@@ -35,3 +35,11 @@ PC ではキーボードでも操作できます（4択：`1`〜`4`、次へ：`
 | `js/data.js` | 単元・問題データ |
 | `js/app.js` | アプリ本体（出題・採点・記録） |
 | `css/style.css` | スタイル |
+
+## 印刷用プリント（PDF）
+`print/` に分野別の A4 プリントがあります（表紙・単元ごとの問題ページ・解答解説ページ）。
+問題データを変えたら、次のコマンドで作り直せます（Playwright と Chromium が必要）。
+
+```sh
+node rika/tools/make-print.js bio     # bio / earth / chem / lab
+```
