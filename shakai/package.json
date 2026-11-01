@@ -1,0 +1,10 @@
+{
+  "name": "shakai-drill",
+  "private": true,
+  "description": "中学受験の社会の暗記分野を演習するドリルアプリ（ビルド不要）",
+  "scripts": {
+    "test": "node tests/data.test.js",
+    "test:e2e": "node tests/e2e.test.js",
+    "start": "python3 -m http.server 8000"
+  }
+}

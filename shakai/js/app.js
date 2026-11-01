@@ -793,6 +793,11 @@
   save();
   renderHome();
 
+  // ホーム画面に追加したときにオフラインでも使えるようにする（http/https のときだけ）
+  if ('serviceWorker' in navigator && /^https?:$/.test(location.protocol)) {
+    navigator.serviceWorker.register('sw.js').catch(() => { /* 登録できなくても通常どおり動く */ });
+  }
+
   // テスト用に一部の関数を公開
   window.__shakai = { isTypedCorrect, norm, choicesFor };
 })();
