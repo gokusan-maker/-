@@ -57,7 +57,7 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     await p.click('[data-mode=due]'); await p.click('.choice[data-k="0"]'); await p.click('.quit'); await p.click('#home');
   });
   await step('年代ならべかえ', async () => {
-    await p.click('[data-mode=sort]');
+    await p.click('[data-mode=sort]'); await p.click('[data-era=medieval]');
     for (let r = 0; r < 5; r++) { for (let k = 0; k < 4; k++) await p.click(`.event[data-k="${k}"]`); await p.click('#check'); await p.click('#next'); }
     await p.click('#home');
   });
@@ -84,7 +84,11 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     await p.click('#home');
   });
   await step('記録・設定', async () => {
-    await p.click('#btn-stats'); await p.click('#home');
+    await p.click('#btn-stats'); await p.click('#print');
+    await p.selectOption('#src', 'h3'); await p.click('#pcount [data-n="10"]'); await p.click('#shuffle');
+    if (await p.$$eval('.sheet-list li', x => x.length) !== 10) throw new Error('プリントの問題数');
+    await p.click('#home');
+    await p.click('#btn-settings'); await p.click('#goal [data-g="10"]'); await p.click('#home');
     await p.click('#btn-settings'); await p.click('[data-key=big]'); await p.click('[data-key=big]'); await p.click('#home');
   });
   await step('旧形式の記録の移行', async () => {

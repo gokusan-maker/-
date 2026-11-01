@@ -334,3 +334,38 @@ html.big #view { zoom: 1.15; }
 .ondo .pl { text-anchor: start; fill: #3f7fc0; }
 .ondo .mo { text-anchor: middle; }
 .ondo .unit { font-weight: 700; }
+
+/* ===================== 目標・時代選択・フォーカス ===================== */
+.bar.goal { height: 5px; margin: 6px 6px 0; }
+.bar.goal > i { background: var(--accent); }
+.unit.era .pct { font-size: 22px; }
+button:focus-visible, .choice:focus-visible, input:focus-visible, select:focus-visible {
+  outline: 3px solid var(--civ); outline-offset: 2px;
+}
+.select {
+  width: 100%; min-height: 44px; margin-top: 6px; padding: 6px 10px; border-radius: 10px; font: inherit; font-size: 15px;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink);
+}
+
+/* ===================== 印刷用プリント ===================== */
+.sheet { background: #fff; color: #111; border: 1px solid var(--line); border-radius: 8px; padding: 18px 18px 24px; font-size: 13px; }
+.sheet-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px; border-bottom: 2px solid #111; padding-bottom: 6px; margin-bottom: 10px; }
+.sheet-head b { font-size: 16px; }
+.sheet-name span { display: inline-block; width: 8em; border-bottom: 1px solid #111; margin: 0 4px; }
+.sheet-list { margin: 0; padding-left: 2em; }
+.sheet-list li { padding: 7px 0; border-bottom: 1px dotted #999; break-inside: avoid; }
+.sheet-list .sq { display: block; }
+.sheet-list .sline { display: block; height: 1.6em; margin-top: 2px; border-bottom: 1px solid #555; width: 60%; margin-left: auto; }
+.sheet-answers { margin-top: 28px; }
+.ans-list { columns: 2; column-gap: 24px; margin: 0; padding-left: 2em; }
+.ans-list li { padding: 2px 0; break-inside: avoid; }
+
+@media print {
+  @page { size: A4; margin: 14mm; }
+  body { background: #fff; }
+  .no-print, .toast { display: none !important; }
+  #view { padding: 0; zoom: 1 !important; }
+  #app { max-width: none; }
+  .sheet { border: 0; padding: 0; font-size: 11pt; }
+  .sheet-answers { break-before: page; margin-top: 0; }
+}

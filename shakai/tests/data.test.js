@@ -44,6 +44,7 @@ all.forEach(it => {
   check(typeof it.q === 'string' && it.q.length >= 4, `${it.id}: 問題文が短すぎる`);
   check(typeof it.a === 'string' && it.a.trim() === it.a && it.a.length > 0, `${it.id}: 答えが空か、前後に空白がある`);
   check(/[？?]$/.test(it.q), `${it.id}: 問題文が「？」で終わっていない`);
+  check(typeof it.e === 'string', `${it.id}: 解説が文字列ではない（誤答の配列を4番目に書いていないか）`);
   if (it.ch) {
     check(it.ch.length >= 3, `${it.id}: 指定した誤答が3つ未満`);
     check(!it.ch.includes(it.a), `${it.id}: 誤答に正解がふくまれている`);

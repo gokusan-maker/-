@@ -40,7 +40,7 @@
     best: {},
     ext: {},
     pref: { units: UNITS.map(u => u.id), count: 10 },
-    settings: { sound: true, big: false }
+    settings: { sound: true, big: false, goal: 20 }
   });
   let S;
   try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(STORE_KEY) || 'null') || {}); }
@@ -63,7 +63,12 @@
       S.streak = S.lastDay === addDays(-1) ? S.streak + 1 : 1;
       S.lastDay = t;
     }
-    S.days[t] = (S.days[t] || 0) + n;
+    const before = S.days[t] || 0;
+    S.days[t] = before + n;
+    const goal = S.settings.goal;
+    if (goal && before < goal && S.days[t] >= goal) {
+      setTimeout(() => { toast(`🎉 今日の目標 ${goal}問 達成！`); sound.done(); }, 400);
+    }
   }
   function record(id, ok) {
     const r = S.items[id] || (S.items[id] = { c: 0, w: 0, s: 0, box: 0, due: today() });
@@ -174,7 +179,9 @@
 
     view.innerHTML = `
       <div class="stats">
-        <div class="card stat"><div class="num">${S.days[today()] || 0}</div><div class="lbl">今日といた数</div></div>
+        <div class="card stat"><div class="num">${S.days[today()] || 0}${S.settings.goal ? `<small class="of">/${S.settings.goal}</small>` : ''}</div>
+          <div class="lbl">${S.settings.goal && (S.days[today()] || 0) >= S.settings.goal ? '🎉 目標達成' : '今日といた数'}</div>
+          ${S.settings.goal ? `<div class="bar goal"><i style="width:${Math.min(100, (S.days[today()] || 0) / S.settings.goal * 100)}%"></i></div>` : ''}</div>
         <div class="card stat"><div class="num">${c + w ? Math.round(c / (c + w) * 100) : '–'}<small>${c + w ? '%' : ''}</small></div><div class="lbl">正答率</div></div>
         <div class="card stat"><div class="num">${mastered}<small class="of">/${ALL.length}</small></div><div class="lbl">覚えた問題</div></div>
       </div>
@@ -579,17 +586,42 @@
   }
 
   /* ===================== 年代ならべかえ ===================== */
-  function makeSortRound() {
+  const ERAS = [
+    { id: 'all', name: 'すべての時代', from: 0, to: 9999 },
+    { id: 'ancient', name: '古代（〜平安）', from: 0, to: 1184 },
+    { id: 'medieval', name: '中世（鎌倉〜安土桃山）', from: 1185, to: 1602 },
+    { id: 'early', name: '近世（江戸）', from: 1603, to: 1867 },
+    { id: 'modern', name: '近代・現代（明治〜）', from: 1868, to: 9999 }
+  ];
+  function makeSortRound(eraId = 'all') {
     // 年がかぶらない4つのできごとを選ぶ
+    const era = ERAS.find(e => e.id === eraId) || ERAS[0];
     const picked = [];
-    for (const ev of shuffle(EVENTS)) {
+    for (const ev of shuffle(EVENTS.filter(e => e.y >= era.from && e.y <= era.to))) {
       if (picked.every(p => p.y !== ev.y)) picked.push(ev);
       if (picked.length === 4) break;
     }
     return picked;
   }
   function startSort() {
-    renderSort({ round: 0, score: 0, set: makeSortRound(), log: [] });
+    onKey(null);
+    view.innerHTML = `
+      <h2 style="margin-top:4px">⏳ 年代ならべかえ</h2>
+      <p class="muted">4つのできごとを古い順にタップしてならべます。${SORT_ROUNDS}問出題します。時代をえらんでください。</p>
+      <div class="units">
+        ${ERAS.map(e => {
+          const n = EVENTS.filter(x => x.y >= e.from && x.y <= e.to).length;
+          return `<button class="card unit era" data-era="${e.id}"><span class="uico">⏳</span>
+            <span><span class="uname">${e.name}</span><span class="umeta"> ・ できごと${n}件</span></span><span class="pct">›</span></button>`;
+        }).join('')}
+      </div>
+      <div class="row" style="margin-top:16px"><button class="btn sub" id="home">ホームへ</button></div>`;
+    $$('[data-era]').forEach(b => b.onclick = () => playSort(b.dataset.era));
+    $('#home').onclick = renderHome;
+    window.scrollTo(0, 0);
+  }
+  function playSort(era) {
+    renderSort({ round: 0, score: 0, era, set: makeSortRound(era), log: [] });
   }
   function renderSort(st) {
     const order = [];   // 選んだ順のインデックス
@@ -626,7 +658,7 @@
         $('#next').onclick = () => {
           st.round++;
           if (st.round >= SORT_ROUNDS) return finish();
-          st.set = makeSortRound();
+          st.set = makeSortRound(st.era);
           renderSort(st);
         };
       } else {
@@ -658,7 +690,7 @@
         title: '年代ならべかえ',
         log: st.log.map(l => ({ q: 'あなたの順：' + l.q, a: l.a, ok: l.ok })),
         msg: st.score === SORT_ROUNDS ? 'パーフェクト！年代はバッチリ！🎉' : `年号はゴロ合わせで覚えるのもおすすめ！（これまで ${S.sort.played}回・パーフェクト ${S.sort.perfect}回）`,
-        again: startSort
+        again: () => playSort(st.era)
       });
     };
     onKey(e => {
@@ -724,8 +756,70 @@
         <div>${esc(it.q)}<br><span class="a">→ ${esc(it.a)}</span></div></div>`).join('')}</div>`
         : '<p class="muted">まちがえた問題はまだありません。</p>'}
 
-      <div class="row" style="margin-top:20px"><button class="btn sub" id="home">ホームへ</button></div>`;
+      <div class="row" style="margin-top:20px">
+        <button class="btn sub" id="print">📄 プリントをつくる</button>
+        <button class="btn sub" id="home">ホームへ</button>
+      </div>`;
     $('#home').onclick = renderHome;
+    $('#print').onclick = renderPrint;
+    window.scrollTo(0, 0);
+  }
+
+  /* ===================== 印刷用プリント ===================== */
+  function renderPrint() {
+    onKey(null); stopTimer();
+    const weak = ALL.filter(it => isWeak(it.id));
+    let src = weak.length ? 'weak' : UNITS[0].id;
+    let count = 20;
+    let seed = shuffle(ALL.map(it => it.id));   // 並び順（「問題を入れかえる」で変わる）
+    const pick = () => {
+      const items = src === 'weak' ? weak : UNIT[src].items;
+      const order = Object.fromEntries(seed.map((id, k) => [id, k]));
+      return items.slice().sort((a, b) => order[a.id] - order[b.id]).slice(0, count || items.length);
+    };
+    const draw = () => {
+      const items = pick();
+      const title = src === 'weak' ? '苦手な問題' : UNIT[src].name;
+      view.innerHTML = `
+        <div class="no-print">
+          <h2 style="margin-top:4px">📄 プリントをつくる</h2>
+          <p class="muted">問題用紙と解答を印刷できます。紙に書いて覚えたいときに使ってください。</p>
+          <div class="card setting col">
+            <label><b>出題する問題</b><br>
+              <select id="src" class="select">
+                ${weak.length ? `<option value="weak" ${src === 'weak' ? 'selected' : ''}>苦手な問題（${weak.length}問）</option>` : ''}
+                ${FIELDS.map(f => `<optgroup label="${f.name}">${UNITS.filter(u => u.field === f.id).map(u =>
+                  `<option value="${u.id}" ${src === u.id ? 'selected' : ''}>${esc(u.name)}（${u.items.length}問）</option>`).join('')}</optgroup>`).join('')}
+              </select></label>
+            <div class="seg" id="pcount">${[10, 20, 30, 0].map(k => `<button data-n="${k}" class="${count === k ? 'on' : ''}">${k ? k + '問' : 'ぜんぶ'}</button>`).join('')}</div>
+            <div class="row">
+              <button class="btn sub" id="shuffle">問題を入れかえる</button>
+              <button class="btn" id="doprint">🖨 印刷する</button>
+            </div>
+          </div>
+          <h2>プレビュー</h2>
+        </div>
+        <div class="sheet">
+          <div class="sheet-head">
+            <div><b>社会 暗記プリント</b>　${esc(title)}</div>
+            <div class="sheet-name">　　月　　日　名前<span></span>　　　／${items.length}</div>
+          </div>
+          <ol class="sheet-list">
+            ${items.map(it => `<li><span class="sq">${esc(it.q)}</span><span class="sline"></span></li>`).join('')}
+          </ol>
+          <div class="sheet-answers">
+            <div class="sheet-head"><b>解答</b>　${esc(title)}</div>
+            <ol class="ans-list">${items.map(it => `<li>${esc(it.a)}</li>`).join('')}</ol>
+          </div>
+        </div>
+        <div class="row no-print" style="margin-top:16px"><button class="btn sub" id="home">ホームへ</button></div>`;
+      $('#src').onchange = e => { src = e.target.value; draw(); };
+      $$('#pcount button').forEach(b => b.onclick = () => { count = +b.dataset.n; draw(); });
+      $('#shuffle').onclick = () => { seed = shuffle(seed); draw(); };
+      $('#doprint').onclick = () => window.print();
+      $('#home').onclick = renderHome;
+    };
+    draw();
     window.scrollTo(0, 0);
   }
 
@@ -739,6 +833,10 @@
       <h2 style="margin-top:4px">⚙ 設定</h2>
       ${sw('sound', '効果音', '正解・不正解のときに音を鳴らす')}
       ${sw('big', '文字を大きくする', '問題や選択肢を大きく表示する')}
+      <div class="card setting col">
+        <span><b>1日の目標</b><br><span class="muted">1日にとく問題数の目標。達成するとお知らせします。</span></span>
+        <div class="seg" id="goal">${[0, 10, 20, 30, 50].map(g => `<button data-g="${g}" class="${S.settings.goal === g ? 'on' : ''}">${g ? g + '問' : 'なし'}</button>`).join('')}</div>
+      </div>
 
       <h2>データ</h2>
       <div class="card setting col">
@@ -752,6 +850,10 @@
       <button class="danger" id="reset">学習記録をすべてリセット</button>
       <div class="row" style="margin-top:20px"><button class="btn sub" id="home">ホームへ</button></div>`;
     $$('.toggle').forEach(t => t.onchange = () => { S.settings[t.dataset.key] = t.checked; save(); applySettings(); if (t.dataset.key === 'sound' && t.checked) sound.ok(); });
+    $$('#goal button').forEach(b => b.onclick = () => {
+      S.settings.goal = +b.dataset.g; save();
+      $$('#goal button').forEach(x => x.classList.toggle('on', x === b));
+    });
     $('#home').onclick = renderHome;
     $('#export').onclick = () => {
       const blob = new Blob([JSON.stringify(S)], { type: 'application/json' });
