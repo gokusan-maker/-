@@ -273,3 +273,30 @@ html.big #view { zoom: 1.15; }
   .icon-btn { width: 34px; height: 34px; font-size: 15px; }
   .streak { font-size: 12px; }
 }
+
+/* ===================== 白地図 ===================== */
+:root { --tile: #e6e1d3; }
+@media (prefers-color-scheme: dark) { :root { --tile: #3b4048; } }
+.map-card { padding: 8px; margin-bottom: 14px; }
+.jmap { display: block; width: 100%; height: auto; user-select: none; -webkit-user-select: none; }
+.jmap .inset { stroke: var(--muted); stroke-width: 1.5; fill: none; stroke-dasharray: 4 3; }
+.jmap .tile { cursor: pointer; outline: none; }
+.jmap .tile rect { fill: var(--fill); stroke: rgba(0,0,0,.18); stroke-width: 1; transition: fill .15s; }
+.jmap .tile:hover rect { stroke: var(--ink); stroke-width: 2; }
+.jmap .tile text { text-anchor: middle; dominant-baseline: central; font-weight: 700; fill: #222; pointer-events: none; font-family: var(--font); }
+.jmap .tile.hl rect { fill: var(--accent); stroke: var(--ink); stroke-width: 2.5; }
+.jmap .tile.hl text { fill: #fff; }
+.jmap .tile.ok rect { fill: var(--ok); stroke: var(--ink); stroke-width: 2.5; }
+.jmap .tile.ng rect { fill: var(--ng); stroke: var(--ink); stroke-width: 2.5; }
+.jmap .tile.ok text, .jmap .tile.ng text { fill: #fff; }
+.pref-info { padding: 12px 16px; min-height: 84px; font-size: 15px; }
+.pi-head { display: flex; align-items: center; gap: 10px; margin-bottom: 2px; }
+.pi-head b { font-size: 19px; }
+.legend { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 10px; font-size: 12px; color: var(--muted); }
+.legend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; margin-right: 4px; vertical-align: -1px; }
+.choices.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.choices.grid2 .choice { min-height: 48px; font-size: 15px; padding: 8px 10px; }
+.big-name { font-size: 24px; color: var(--accent); }
+@media (max-width: 520px) {
+  .map-card { margin-left: -12px; margin-right: -12px; padding: 4px; border-radius: 12px; }
+}
