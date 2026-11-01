@@ -60,6 +60,9 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     await p.click('[data-mode=sort]'); await p.click('[data-era=medieval]');
     for (let r = 0; r < 5; r++) { for (let k = 0; k < 4; k++) await p.click(`.event[data-k="${k}"]`); await p.click('#check'); await p.click('#next'); }
     await p.click('#home');
+    await p.click('[data-mode=sort]'); await p.click('#ckind [data-k=nengo]'); await p.click('[data-era=all]');
+    for (let i = 0; i < 10; i++) { await p.click('.choice[data-k="0"]'); await p.click('#next'); }
+    await p.click('#home');
   });
   await step('白地図', async () => {
     for (const m of ['where', 'name', 'cap', 'region']) {

@@ -198,7 +198,7 @@
         ${mode('write', '✏️', '書いて答える', '答えを入力して正確に覚える')}
         ${mode('ta', '⏱', 'タイムアタック', `${TA_SECONDS}秒で何問とけるか${S.best.ta ? `（最高 ${S.best.ta}問）` : ''}`)}
         ${mode('weak', '🎯', '苦手復習', weak ? `まちがえた問題 ${weak}問` : 'まちがえた問題はまだありません', weak ? '' : 'disabled')}
-        ${mode('sort', '⏳', '年代ならべかえ', 'できごとを古い順にならべる')}
+        ${mode('sort', '⏳', '年代・年号', 'できごとを古い順にならべる・年号4択')}
       </div>
 
       ${EXT_MODES.length ? `<h2>地図・資料で覚える</h2>
@@ -603,11 +603,18 @@
     }
     return picked;
   }
+  let chronoKind = 'sort';   // sort（ならべかえ）| nengo（年号4択）
   function startSort() {
     onKey(null);
     view.innerHTML = `
-      <h2 style="margin-top:4px">⏳ 年代ならべかえ</h2>
-      <p class="muted">4つのできごとを古い順にタップしてならべます。${SORT_ROUNDS}問出題します。時代をえらんでください。</p>
+      <h2 style="margin-top:4px">⏳ 年代・年号</h2>
+      <div class="seg" id="ckind">
+        <button data-k="sort" class="${chronoKind === 'sort' ? 'on' : ''}">ならべかえ</button>
+        <button data-k="nengo" class="${chronoKind === 'nengo' ? 'on' : ''}">年号4択</button>
+      </div>
+      <p class="muted">${chronoKind === 'sort'
+        ? `4つのできごとを古い順にタップしてならべます（${SORT_ROUNDS}問）。`
+        : `できごとの年、または年のできごとを4つの中からえらびます（${NENGO_ROUNDS}問）。`}時代をえらんでください。</p>
       <div class="units">
         ${ERAS.map(e => {
           const n = EVENTS.filter(x => x.y >= e.from && x.y <= e.to).length;
@@ -616,9 +623,67 @@
         }).join('')}
       </div>
       <div class="row" style="margin-top:16px"><button class="btn sub" id="home">ホームへ</button></div>`;
-    $$('[data-era]').forEach(b => b.onclick = () => playSort(b.dataset.era));
+    $$('#ckind button').forEach(b => b.onclick = () => { chronoKind = b.dataset.k; startSort(); });
+    $$('[data-era]').forEach(b => b.onclick = () => (chronoKind === 'sort' ? playSort : playNengo)(b.dataset.era));
     $('#home').onclick = renderHome;
     window.scrollTo(0, 0);
+  }
+  // 年号4択：近い年のできごとを誤答にして、まぎらわしくする
+  const NENGO_ROUNDS = 10;
+  function playNengo(eraId) {
+    const era = ERAS.find(e => e.id === eraId) || ERAS[0];
+    const pool = EVENTS.filter(e => e.y >= era.from && e.y <= era.to);
+    const qs = shuffle(pool).slice(0, NENGO_ROUNDS);
+    const log = [];
+    let i = 0;
+    const near = ev => {
+      const seen = new Set([ev.y]);
+      const cand = EVENTS.filter(e => !seen.has(e.y) && (seen.add(e.y), true))
+        .sort((a, b) => Math.abs(a.y - ev.y) - Math.abs(b.y - ev.y)).slice(0, 7);
+      return shuffle(cand).slice(0, 3);
+    };
+    const finish = () => renderResult({ title: '年号4択', log, again: () => playNengo(eraId) });
+    const ask = () => {
+      const ev = qs[i];
+      const byYear = i % 2 === 0;   // 交互に「何年？」「何があった？」を出す
+      const opts = shuffle([ev, ...near(ev)]);
+      const text = byYear ? `「${ev.t}」${/[るすつくぶむう]$/.test(ev.t) ? 'のは' : 'は'}何年？` : `${ev.y}年のできごとは？`;
+      view.innerHTML = `${qheader(i, qs.length)}
+        <div class="card question"><span class="tag his">歴史</span> <span class="muted">年号4択</span>
+          <p class="qt">${esc(text)}</p></div>
+        <div class="choices">
+          ${opts.map((o, k) => `<button class="choice" data-k="${k}"><span class="no">${k + 1}</span><span>${byYear ? o.y + '年' : esc(o.t)}</span></button>`).join('')}
+        </div>
+        <div id="fb"></div>`;
+      bindQuit(() => log.length > 0, finish);
+      let done = false;
+      const answer = k => {
+        if (done) return;
+        done = true;
+        const ok = opts[k] === ev;
+        ok ? sound.ok() : sound.ng();
+        touchDay(); save();
+        $$('.choice').forEach((b, j) => {
+          b.disabled = true;
+          if (opts[j] === ev) b.classList.add('correct'); else if (j === k) b.classList.add('wrong');
+        });
+        log.push({ q: text, a: byYear ? ev.y + '年' : ev.t, ok, pick: byYear ? opts[k].y + '年' : opts[k].t });
+        $('#fb').innerHTML = `<div class="card feedback ${ok ? '' : 'ng'}">
+            <div class="verdict">${ok ? '⭕ 正解！' : '❌ ざんねん'}</div>
+            <div class="exp">${opts.slice().sort((a, b) => a.y - b.y).map(o => `${o.y}年　${esc(o.t)}`).join('<br>')}</div>
+          </div>
+          <div class="next-wrap"><button class="btn block" id="next">${i + 1 < qs.length ? '次の問題へ' : '結果を見る'}</button></div>`;
+        $('#next').onclick = () => { i++; i < qs.length ? ask() : finish(); };
+        $('#fb').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      };
+      $$('.choice').forEach(b => b.onclick = () => answer(+b.dataset.k));
+      onKey(e => {
+        if (!done && /^[1-4]$/.test(e.key)) answer(+e.key - 1);
+        else if (done && e.key === 'Enter') { e.preventDefault(); $('#next').click(); }
+      });
+      window.scrollTo(0, 0);
+    };
+    ask();
   }
   function playSort(era) {
     renderSort({ round: 0, score: 0, era, set: makeSortRound(era), log: [] });
