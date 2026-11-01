@@ -300,3 +300,37 @@ html.big #view { zoom: 1.15; }
 @media (max-width: 520px) {
   .map-card { margin-left: -12px; margin-right: -12px; padding: 4px; border-radius: 12px; }
 }
+
+/* ===================== 地図記号 ===================== */
+.sym { width: 56px; height: 56px; flex: none; color: var(--ink); }
+.sym text { font-family: 'Hiragino Mincho ProN', 'Yu Mincho', serif; }
+.sym.mini { width: 26px; height: 26px; vertical-align: middle; }
+.sym-big { display: flex; justify-content: center; padding: 10px 0 0; }
+.sym-big .sym { width: 120px; height: 120px; }
+.sym-list { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.sym-item { display: flex; gap: 10px; align-items: center; padding: 10px; font-size: 14px; }
+.sym-item .muted { font-size: 11px; line-height: 1.4; }
+.choices.sym-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.choices.sym-grid .choice { justify-content: center; min-height: 96px; position: relative; }
+.choices.sym-grid .choice .no { position: absolute; top: 8px; left: 8px; }
+.choices.sym-grid .sym { width: 70px; height: 70px; }
+.sym-ans { display: flex; gap: 12px; align-items: center; margin-top: 6px; }
+@media (max-width: 400px) { .sym-list { grid-template-columns: 1fr; } }
+
+/* ===================== 雨温図 ===================== */
+.ondo-card { padding: 10px 12px 12px; margin-bottom: 12px; }
+.ondo-head { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; margin-bottom: 4px; }
+.ondo-head b { font-size: 16px; }
+.ondo-head .muted { font-size: 12px; }
+.ondo-card .exp { font-size: 14px; color: var(--muted); }
+.ondo { display: block; width: 100%; height: auto; }
+.ondo .grid { stroke: var(--line); stroke-width: 1; }
+.ondo .zero { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.ondo .pbar { fill: #5b9bd5; }
+.ondo .tline { fill: none; stroke: #e2574c; stroke-width: 2.5; stroke-linejoin: round; }
+.ondo .tdot { fill: #e2574c; }
+.ondo .ax { font-size: 10px; fill: var(--muted); dominant-baseline: central; font-family: var(--font); }
+.ondo .tl { text-anchor: end; fill: #e2574c; }
+.ondo .pl { text-anchor: start; fill: #3f7fc0; }
+.ondo .mo { text-anchor: middle; }
+.ondo .unit { font-weight: 700; }
