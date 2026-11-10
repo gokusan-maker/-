@@ -74,6 +74,22 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
       await p.click('#home');
     }
   });
+  await step('白地図：ぜんぶ見つけよう', async () => {
+    await p.click('[data-mode="x:map"]'); await p.click('[data-ch=landlocked]');
+    const idx = await p.evaluate(() => window.SHAKAI_MAP.PREFS.filter(x => ['栃木県','群馬県','埼玉県','山梨県','長野県','岐阜県','滋賀県','奈良県'].includes(x.name)).map(x => x.i));
+    await p.click('.jmap .tile[data-p="0"]');   // まちがい1回
+    for (const k of idx) await p.click(`.jmap .tile[data-p="${k}"]`);
+    if (!(await p.textContent('#fb')).includes('ぜんぶ見つけた')) throw new Error('完了しない');
+    await p.click('#back'); await p.click('[data-ch=capdiff]');
+    if (await p.$$eval('.jmap text', x => x.length) !== 47) throw new Error('県名が表示されていない');
+    await p.click('#giveup'); await p.click('#back'); await p.click('[data-ch=region]'); await p.click('#giveup');
+    await p.click('#back'); await p.click('#home');
+  });
+  await step('人物さかさクイズ', async () => {
+    await p.click('[data-mode="x:persons"]'); await p.click('[data-u=h3]');
+    for (let i = 0; i < 10; i++) { await p.click('.choice[data-k="0"]'); await p.click('#next'); }
+    await p.click('#home');
+  });
   await step('地図記号', async () => {
     for (const m of ['s2n', 'n2s']) {
       await p.click('[data-mode="x:symbols"]'); await p.click(`[data-m=${m}]`);

@@ -410,3 +410,6 @@ mark { background: #ffe58a; color: #222; border-radius: 3px; padding: 0 1px; }
 .exam-chart .col i { display: block; width: 60%; min-height: 2px; background: var(--civ); border-radius: 4px 4px 0 0; }
 .exam-chart .cn { font-size: 11px; font-weight: 700; }
 .exam-chart .cd { font-size: 10px; color: var(--muted); margin-top: 4px; }
+.jmap .tile.missed rect { fill: var(--accent); stroke: var(--ink); stroke-width: 2.5; stroke-dasharray: 4 3; }
+.jmap .tile.missed text { fill: #fff; }
+.choice.desc { font-size: 15px; line-height: 1.5; }

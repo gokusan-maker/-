@@ -113,6 +113,17 @@
           ${item('cap', '🏛', '県庁所在地', '色のついた県の県庁所在地をえらぶ')}
           ${item('region', '🧩', '地方区分', '色のついた県が何地方かえらぶ')}
         </div>
+        <h2>ぜんぶ見つけよう</h2>
+        <p class="muted">条件にあう都道府県を、地図の上でぜんぶタップしよう。</p>
+        <div class="units">
+          ${CHALLENGES.map(c => {
+            const r = (st().chal || {})[c.id];
+            const n = c.list().length;
+            return `<button class="card unit" data-ch="${c.id}"><span class="uico">${c.icon}</span>
+              <span><span class="uname">${esc(c.name)}</span>${n ? `<span class="umeta"> ・ ${n}つ</span>` : ''}
+              ${r ? `<div class="umeta">最高記録 ${fmtTime(r.time)}・まちがい${r.miss}回</div>` : ''}</span><span class="pct">›</span></button>`;
+          }).join('')}
+        </div>
         <h2>地図で調べる</h2>
         <p class="muted">県をタップすると、県庁所在地と特色が表示されます。</p>
         <div class="card map-card">${mapSvg()}</div>
@@ -120,6 +131,7 @@
         <div class="legend">${REGIONS.map(r => `<span><i style="background:${r.color}"></i>${r.name}</span>`).join('')}</div>
         <div class="row" style="margin-top:16px"><button class="btn sub" id="home">ホームへ</button></div>`;
       $$('[data-m]').forEach(b => b.onclick = () => play(b.dataset.m));
+      $$('[data-ch]').forEach(b => b.onclick = () => challenge(CHALLENGES.find(c => c.id === b.dataset.ch)));
       $$('.jmap .tile').forEach(g => g.onclick = () => {
         const p = PREFS[+g.dataset.p];
         $$('.jmap .tile').forEach(t => t.classList.toggle('hl', t === g));
@@ -127,6 +139,93 @@
           <div>県庁所在地：<b>${esc(p.cap)}</b></div><div class="muted">${esc(p.note)}</div>`;
       });
       $('#home').onclick = App.goHome;
+      window.scrollTo(0, 0);
+    }
+
+    /* ---------- ぜんぶ見つけよう ---------- */
+    const LANDLOCKED = ['栃木県', '群馬県', '埼玉県', '山梨県', '長野県', '岐阜県', '滋賀県', '奈良県'];
+    const CHALLENGES = [
+      { id: 'landlocked', icon: '🏞', name: '海に面していない県', labels: false, list: () => PREFS.filter(p => LANDLOCKED.includes(p.name)) },
+      { id: 'capdiff', icon: '🏛', name: '県名と県庁所在地名がちがう都道府県', labels: true, note: '東京都は除く。',
+        list: () => PREFS.filter(p => p.name !== '東京都' && p.cap.replace(/市$/, '') !== p.short) },
+      { id: 'region', icon: '🧩', name: 'ある地方の県（地方はランダム）', labels: false, list: () => [] }
+    ];
+    const fmtTime = ms => { const t = Math.round(ms / 1000); return `${Math.floor(t / 60)}分${String(t % 60).padStart(2, '0')}秒`; };
+    function addLabel(g) {
+      if (g.querySelector('text')) return;
+      const pp = PREFS[+g.dataset.p], r = g.querySelector('rect');
+      const tx = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      tx.setAttribute('x', +r.getAttribute('x') + +r.getAttribute('width') / 2);
+      tx.setAttribute('y', +r.getAttribute('y') + +r.getAttribute('height') / 2);
+      tx.setAttribute('font-size', pp.short.length >= 3 ? 12.5 : 16);
+      tx.textContent = pp.short;
+      g.appendChild(tx);
+    }
+    function challenge(c) {
+      let title = c.name, targets = c.list();
+      if (c.id === 'region') {
+        // 北海道地方は1つだけなので出さない
+        const rs = REGIONS.filter(x => x.id !== 'hokkaido');
+        const r = rs[Math.floor(Math.random() * rs.length)];
+        title = `${r.name}の県`;
+        targets = PREFS.filter(p => p.r === r.id);
+      }
+      const want = new Set(targets.map(p => p.i));
+      const found = new Set();
+      let miss = 0, over = false;
+      const t0 = Date.now();
+      App.onKey(null);
+      view.innerHTML = `
+        <div class="qhead"><button class="quit" aria-label="やめる">×</button>
+          <div class="bar"><i id="chbar" style="width:0%"></i></div><span class="count" id="chcount">0/${want.size}</span></div>
+        <div class="card question"><span class="tag geo">地理</span> <span class="muted">ぜんぶ見つけよう</span>
+          <p class="qt"><b>${esc(title)}</b>をぜんぶタップしよう${c.note ? `<br><span class="muted">${esc(c.note)}</span>` : ''}</p>
+          <div class="muted" id="chmiss">まちがい 0回</div></div>
+        <div class="card map-card">${mapSvg({ labels: c.labels, region: false })}</div>
+        <div id="fb"></div>
+        <div class="row" id="chctl"><button class="btn sub" id="giveup">答えを見る</button></div>`;
+      const end = gaveUp => {
+        over = true;
+        const time = Date.now() - t0;
+        $$('.jmap .tile').forEach(g => {
+          addLabel(g);
+          if (want.has(+g.dataset.p) && !found.has(+g.dataset.p)) g.classList.add('missed');
+        });
+        let best = '';
+        if (!gaveUp) {
+          sound.done();
+          const s = st(); s.chal = s.chal || {};
+          const prev = s.chal[c.id];
+          if (!prev || time < prev.time) { s.chal[c.id] = { time, miss }; best = '🏆 最高記録！'; }
+        }
+        App.touchDay(want.size); App.save();
+        $('#chctl').style.display = 'none';
+        $('#fb').innerHTML = `<div class="card feedback ${gaveUp ? 'ng' : ''}">
+            <div class="verdict">${gaveUp ? '答え' : `🎉 ぜんぶ見つけた！ ${best}`}</div>
+            ${gaveUp ? '' : `<div class="ans">${fmtTime(time)}・まちがい${miss}回</div>`}
+            <div class="exp">${targets.map(p => c.id === 'capdiff' ? `${p.name}（${p.cap}）` : p.name).join('、')}</div>
+          </div>
+          <div class="row next-wrap"><button class="btn" id="again">もう一度</button><button class="btn sub" id="back">白地図メニューへ</button></div>`;
+        $('#again').onclick = () => challenge(c);
+        $('#back').onclick = menu;
+      };
+      $$('.jmap .tile').forEach(g => g.onclick = () => {
+        if (over) return;
+        const k = +g.dataset.p;
+        if (found.has(k)) return;
+        if (want.has(k)) {
+          found.add(k); g.classList.add('ok'); addLabel(g); sound.ok();
+          $('#chcount').textContent = `${found.size}/${want.size}`;
+          $('#chbar').style.width = `${found.size / want.size * 100}%`;
+          if (found.size === want.size) end(false);
+        } else {
+          miss++; sound.ng();
+          $('#chmiss').textContent = `まちがい ${miss}回（${PREFS[k].name}）`;
+          g.classList.add('ng'); setTimeout(() => g.classList.toggle('ng', false), 600);
+        }
+      });
+      $('.quit').onclick = () => { if (over || confirm('やめますか？')) menu(); };
+      $('#giveup').onclick = () => end(true);
       window.scrollTo(0, 0);
     }
 
