@@ -10,7 +10,7 @@ const vm = require('vm');
 // ブラウザ用のスクリプトを window つきの環境で読みこむ
 const ctx = { window: {} };
 vm.createContext(ctx);
-for (const f of ['data.js', 'readings.js', 'map.js', 'symbols.js', 'climate.js']) {
+for (const f of ['data.js', 'readings.js', 'map.js', 'symbols.js', 'climate.js', 'graphs.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx, { filename: f });
 }
 const { FIELDS, UNITS, EVENTS, POOLS } = ctx.window.SHAKAI;
@@ -102,6 +102,21 @@ all.filter(it => /の(県|道|府)庁所在地は？$/.test(it.q)).forEach(it =>
   const name = it.q.replace(/の(県|道|府)庁所在地は？$/, '');
   const p = PREFS.find(x => x.name === name);
   check(p && p.cap === it.a, `${it.id}: 白地図の県庁所在地と食いちがう (${name})`);
+});
+
+/* ---------- グラフ読み取り ---------- */
+const prefNames = new Set(PREFS.map(p => p.name));
+ctx.window.SHAKAI_GRAPHS.forEach(g => {
+  const sum = g.top.reduce((a, [, v]) => a + v, 0);
+  check(sum <= 100, `グラフ「${g.name}」の割合の合計が100をこえている`);
+  g.top.forEach(([p, v], k) => {
+    check(prefNames.has(p), `グラフ「${g.name}」の都道府県名が不正（${p}）`);
+    check(k === 0 || g.top[k - 1][1] >= v, `グラフ「${g.name}」が割合の大きい順になっていない`);
+  });
+  // 問題データの「〜の生産量が日本一」と1位が食いちがっていないか
+  all.filter(it => it.q.startsWith(g.name + 'の生産量が日本一')).forEach(it => {
+    check(it.a === g.top[0][0], `${it.id}: グラフ「${g.name}」の1位（${g.top[0][0]}）と答え（${it.a}）が食いちがう`);
+  });
 });
 
 /* ---------- 結果 ---------- */

@@ -466,3 +466,12 @@ mark { background: #ffe58a; color: #222; border-radius: 3px; padding: 0 1px; }
 @media print {
   .chart, .badges, .utable { break-inside: avoid; }
 }
+
+/* ===================== グラフ読み取り ===================== */
+.gcard { padding: 12px 14px; margin-bottom: 10px; }
+.gbar { display: flex; height: 26px; border-radius: 6px; overflow: hidden; margin: 8px 0; border: 1px solid var(--line); }
+.gbar span { display: block; height: 100%; }
+.glegend { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 12px; font-size: 13px; margin-bottom: 4px; }
+.glegend div { display: flex; align-items: center; gap: 6px; }
+.glegend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.glegend b { margin-left: auto; }

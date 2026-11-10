@@ -106,6 +106,11 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
       await p.click('#home');
     }
   });
+  await step('グラフ読み取り', async () => {
+    await p.click('[data-mode="x:graphs"]'); await p.click('#play');
+    for (let i = 0; i < 8; i++) { await p.click('.choice[data-k="0"]'); await p.click('#next'); }
+    await p.click('#home');
+  });
   await step('雨温図', async () => {
     await p.click('[data-mode="x:climate"]'); await p.click('#play');
     for (let i = 0; i < 6; i++) { await p.click('.choice[data-k="0"]'); await p.click('#next'); }
