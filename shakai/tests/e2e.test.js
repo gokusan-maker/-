@@ -86,6 +86,17 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     for (let i = 0; i < 6; i++) { await p.click('.choice[data-k="0"]'); await p.click('#next'); }
     await p.click('#home');
   });
+  await step('用語さくいん', async () => {
+    await p.click('[data-mode="x:search"]'); await p.fill('#sq', 'りあす');
+    await p.waitForTimeout(300);
+    if (!(await p.textContent('#sres')).includes('リアス海岸')) throw new Error('ひらがなでリアス海岸が見つからない');
+    await p.fill('#sq', '条約'); await p.waitForTimeout(300); await p.click('#squiz');
+    await p.click('.choice[data-k="0"]'); await p.click('.quit'); await p.click('#home');
+  });
+  await step('歴史年表', async () => {
+    await p.click('[data-mode="x:timeline"]'); await p.click('#tl-hide'); await p.click('.tl-row[data-k="3"]');
+    await p.click('#tl-quiz'); await p.click('[data-era=all]'); await p.click('.choice[data-k="0"]'); await p.click('.quit'); await p.click('#home');
+  });
   await step('記録・設定', async () => {
     await p.click('#btn-stats'); await p.click('#print');
     await p.selectOption('#src', 'h3'); await p.click('#pcount [data-n="10"]'); await p.click('#shuffle');

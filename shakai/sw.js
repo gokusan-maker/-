@@ -1,9 +1,9 @@
 /* オフラインでも使えるように、アプリの画面を構成するファイルをキャッシュする */
-const CACHE = 'shakai-drill-v3';
+const CACHE = 'shakai-drill-v4';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
   './css/style.css',
-  './js/data.js', './js/map.js', './js/symbols.js', './js/climate.js', './js/app.js',
+  './js/data.js', './js/map.js', './js/symbols.js', './js/climate.js', './js/timeline.js', './js/search.js', './js/app.js',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'
 ];
 

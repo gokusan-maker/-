@@ -160,7 +160,18 @@
     goHome: () => renderHome(),
     showResult: (opts) => renderResult(opts),
     header: (i, n) => qheader(i, n),
-    bindQuit: (hasProgress, onQuit) => bindQuit(hasProgress, onQuit)
+    bindQuit: (hasProgress, onQuit) => bindQuit(hasProgress, onQuit),
+    // 問題データと出題の部品（拡張モードから使う）
+    ALL, ITEM, UNIT, FIELD,
+    record: (id, ok) => record(id, ok),
+    choicesFor: it => choicesFor(it),
+    isMastered: id => isMastered(id),
+    isWeak: id => isWeak(id),
+    startSession: (mode, items, title) => startSession(mode, items, title),
+    questionCard: it => questionCard(it),
+    feedback: (ok, a, e) => feedback(ok, a, e),
+    stopTimer: () => stopTimer(),
+    startChrono: kind => { chronoKind = kind; startSort(); }
   };
 
   /* ===================== ホーム ===================== */
@@ -201,8 +212,10 @@
         ${mode('sort', '⏳', '年代・年号', 'できごとを古い順にならべる・年号4択')}
       </div>
 
-      ${EXT_MODES.length ? `<h2>地図・資料で覚える</h2>
-      <div class="modes">${EXT_MODES.map(m => mode('x:' + m.id, m.icon, m.name, m.desc)).join('')}</div>` : ''}
+      ${[['practice', 'もっと練習する'], ['material', '地図・資料で覚える'], ['tool', 'しらべる']].map(([sec, ttl]) => {
+        const ms = EXT_MODES.filter(m => (m.section || 'material') === sec);
+        return ms.length ? `<h2>${ttl}</h2><div class="modes">${ms.map(m => mode('x:' + m.id, m.icon, m.name, typeof m.desc === 'function' ? m.desc() : m.desc)).join('')}</div>` : '';
+      }).join('')}
 
       ${FIELDS.map(f => `
         <h2><span class="tag ${f.id}">${f.name}</span></h2>
@@ -670,6 +683,7 @@
         log.push({ q: text, a: byYear ? ev.y + '年' : ev.t, ok, pick: byYear ? opts[k].y + '年' : opts[k].t });
         $('#fb').innerHTML = `<div class="card feedback ${ok ? '' : 'ng'}">
             <div class="verdict">${ok ? '⭕ 正解！' : '❌ ざんねん'}</div>
+            ${ev.goro ? `<div class="goro">💡 ${esc(ev.goro)}</div>` : ''}
             <div class="exp">${opts.slice().sort((a, b) => a.y - b.y).map(o => `${o.y}年　${esc(o.t)}`).join('<br>')}</div>
           </div>
           <div class="next-wrap"><button class="btn block" id="next">${i + 1 < qs.length ? '次の問題へ' : '結果を見る'}</button></div>`;
