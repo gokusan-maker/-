@@ -10,7 +10,7 @@ const vm = require('vm');
 // ブラウザ用のスクリプトを window つきの環境で読みこむ
 const ctx = { window: {} };
 vm.createContext(ctx);
-for (const f of ['data.js', 'map.js', 'symbols.js', 'climate.js']) {
+for (const f of ['data.js', 'readings.js', 'map.js', 'symbols.js', 'climate.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx, { filename: f });
 }
 const { FIELDS, UNITS, EVENTS, POOLS } = ctx.window.SHAKAI;
@@ -68,6 +68,13 @@ Object.values(byQ).filter(l => l.length > 1).forEach(l => {
   const answers = new Set(l.map(it => it.a));
   check(answers.size === 1 || l.every(it => it.ch && l.every(o => !it.ch.includes(o.a))),
     `同じ問題文で答えがちがう: ${l.map(it => it.id).join(', ')}`);
+});
+
+/* ---------- 読みがな ---------- */
+const answers = new Set(all.map(it => it.a));
+Object.entries(ctx.window.SHAKAI_READINGS).forEach(([a, r]) => {
+  check(answers.has(a), `読みがなの見出し「${a}」が問題の答えにない`);
+  check(/^[\u3041-\u309f・ー]+$/.test(r), `「${a}」の読みがなにひらがな以外がある（${r}）`);
 });
 
 /* ---------- 年代ならべかえ ---------- */

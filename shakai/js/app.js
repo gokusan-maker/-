@@ -178,13 +178,22 @@
   // 記述の答え合わせ用：全角/半角・空白・中点のゆれをそろえる
   const norm = s => String(s).normalize('NFKC').replace(/[\s・･,、。.]/g, '').replace(/ヶ/g, 'ケ').toLowerCase();
   const SUFFIX = /(都|道|府|県|市|区|町|村|地方|時代|天皇|条約)$/;
+  const READ = window.SHAKAI_READINGS || {};
+  const kana = s => s.replace(/[\u30a1-\u30f6]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
+  // 答えにふりがなを付けたHTML（読みがないときは答えだけ）
+  const withReading = a => READ[a] ? `${esc(a)}<span class="yomi">（${esc(READ[a])}）</span>` : esc(a);
   function isTypedCorrect(input, answer) {
     const a = norm(answer), x = norm(input);
     if (!x) return false;
     if (x === a) return true;
     // 「青森」→「青森県」のように、最後の「県」「市」などを省いた答えも正解にする
     const base = a.replace(SUFFIX, '');
-    return base.length >= 2 && x === base;
+    return (base.length >= 2 && x === base) || isReadingMatch(input, answer);
+  }
+  // ひらがな（カタカナ）で読みを書いた答え
+  function isReadingMatch(input, answer) {
+    const r = READ[answer];
+    return !!r && kana(norm(input)) === kana(norm(r));
   }
   function renderStreak() {
     const u = curUser();
@@ -221,6 +230,8 @@
     choicesFor: it => choicesFor(it),
     isMastered: id => isMastered(id),
     isWeak: id => isWeak(id),
+    reading: a => READ[a] || '',
+    withReading: a => withReading(a),
     startSession: (mode, items, title) => startSession(mode, items, title),
     questionCard: it => questionCard(it),
     feedback: (ok, a, e) => feedback(ok, a, e),
@@ -412,7 +423,7 @@
   function feedback(ok, answer, exp) {
     return `<div class="card feedback ${ok ? '' : 'ng'}">
       <div class="verdict">${ok ? '⭕ 正解！' : '❌ ざんねん'}</div>
-      ${ok ? '' : `<div class="ans">正解：${esc(answer)}</div>`}
+      <div class="ans">${ok ? (READ[answer] ? withReading(answer) : '') : `正解：${withReading(answer)}`}</div>
       ${exp ? `<div class="exp">${esc(exp)}</div>` : ''}
     </div>`;
   }
@@ -492,6 +503,7 @@
       $('#area').innerHTML = `<div class="card flash-ans">
           <div class="muted">答え</div>
           <div class="big">${esc(it.a)}</div>
+          ${READ[it.a] ? `<div class="yomi">${esc(READ[it.a])}</div>` : ''}
           ${it.e ? `<div class="exp">${esc(it.e)}</div>` : ''}
         </div>
         <p class="hint">漢字まで正しく書けたら「できた」</p>
@@ -530,6 +542,7 @@
       const ok = typed !== null && isTypedCorrect(typed, it.a);
       record(it.id, ok);
       ok ? sound.ok() : sound.ng();
+      if (ok && norm(typed) !== norm(it.a) && isReadingMatch(typed, it.a)) toast(`ひらがなでも正解。本番では漢字で「${it.a}」と書こう`);
       const entry = { id: it.id, ok, pick: typed === null ? '（わからない）' : typed };
       sess.log.push(entry);
       input.disabled = true;

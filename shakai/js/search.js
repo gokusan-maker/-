@@ -19,7 +19,7 @@
 
     // 検索対象をまとめて作っておく
     const docs = [
-      ...App.ALL.map(it => ({ kind: 'item', it, text: fold(it.q + ' ' + it.a + ' ' + it.e) })),
+      ...App.ALL.map(it => ({ kind: 'item', it, text: fold(it.q + ' ' + it.a + ' ' + App.reading(it.a) + ' ' + it.e) })),
       ...EVENTS.map(ev => ({ kind: 'event', ev, text: fold(ev.y + '年 ' + ev.t + ' ' + (ev.goro || '')) })),
       ...PREFS.map(p => ({ kind: 'pref', p, text: fold(p.name + ' ' + p.cap + ' ' + p.note) }))
     ];
@@ -64,7 +64,7 @@
             if (d.kind === 'item') {
               const u = App.UNIT[d.it.unit];
               return `<div class="card rv"><span class="mk"><span class="dot ${u.field}"></span></span><div>
-                <div class="muted">${esc(u.name)}</div>${mark(d.it.q, raw)}<br><span class="a">→ ${mark(d.it.a, raw)}</span>
+                <div class="muted">${esc(u.name)}</div>${mark(d.it.q, raw)}<br><span class="a">→ ${mark(d.it.a, raw)}</span>${App.reading(d.it.a) ? `<span class="yomi">（${esc(App.reading(d.it.a))}）</span>` : ''}
                 ${d.it.e ? `<div class="muted">${mark(d.it.e, raw)}</div>` : ''}</div></div>`;
             }
             if (d.kind === 'event') {

@@ -39,7 +39,7 @@
         <ol class="redsheet ${opts.hide ? 'hiding' : ''}">
           ${items.map(it => `<li class="card">
             <div class="rs-q">${esc(it.q)}${App.isMastered(it.id) ? ' <span class="tag geo">覚えた</span>' : ''}</div>
-            <button class="rs-a"><span>${esc(it.a)}</span></button>
+            <button class="rs-a"><span>${App.withReading(it.a)}</span></button>
             ${it.e ? `<div class="rs-e muted">${esc(it.e)}</div>` : ''}
           </li>`).join('')}
         </ol>

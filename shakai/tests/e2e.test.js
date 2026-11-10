@@ -27,7 +27,8 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     const r = await p.evaluate(() => {
       const f = window.__shakai.isTypedCorrect;
       return [f('青森', '青森県'), f(' 札幌市 ', '札幌市'), f('フランシスコ ザビエル', 'フランシスコ・ザビエル'),
-        f('霞ケ浦', '霞ヶ浦'), f('ＵＮＥＳＣＯ', 'UNESCO'), !f('津', '津市'), !f('', '津市'), !f('岩手県', '青森県')];
+        f('霞ケ浦', '霞ヶ浦'), f('ＵＮＥＳＣＯ', 'UNESCO'), !f('津', '津市'), !f('', '津市'), !f('岩手県', '青森県'),
+        f('しんじこ', '宍道湖'), f('シンジコ', '宍道湖'), !f('しんじ', '宍道湖')];
     });
     if (r.some(x => !x)) throw new Error(JSON.stringify(r));
   });
@@ -132,6 +133,8 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     await p.click('[data-mode="x:search"]'); await p.fill('#sq', 'りあす');
     await p.waitForTimeout(300);
     if (!(await p.textContent('#sres')).includes('リアス海岸')) throw new Error('ひらがなでリアス海岸が見つからない');
+    await p.fill('#sq', 'びわこ'); await p.waitForTimeout(300);
+    if (!(await p.textContent('#sres')).includes('琵琶湖')) throw new Error('読みで琵琶湖が見つからない');
     await p.fill('#sq', '条約'); await p.waitForTimeout(300); await p.click('#squiz');
     await p.click('.choice[data-k="0"]'); await p.click('.quit'); await p.click('#home');
   });
