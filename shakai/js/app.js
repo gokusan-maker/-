@@ -53,11 +53,23 @@
   const saveProfiles = () => { try { localStorage.setItem(PROFILE_KEY, JSON.stringify(P)); } catch (e) { /* 保存できない環境 */ } };
   const curUser = () => P.list.find(u => u.id === P.cur);
 
-  function load(id) {
-    let st;
-    try { st = Object.assign(fresh(), JSON.parse(localStorage.getItem(keyOf(id)) || 'null') || {}); }
-    catch (e) { st = fresh(); }
+  const isObj = v => !!v && typeof v === 'object' && !Array.isArray(v);
+  // 保存データの形をととのえる（こわれた項目は初期値にもどす）
+  function sanitize(raw) {
+    const def = fresh();
+    const st = Object.assign(def, isObj(raw) ? raw : {});
+    ['items', 'days', 'best', 'ext', 'sort', 'pref', 'settings'].forEach(k => { if (!isObj(st[k])) st[k] = fresh()[k]; });
     st.settings = Object.assign(fresh().settings, st.settings);
+    st.sort = Object.assign(fresh().sort, st.sort);
+    if (!Array.isArray(st.pref.units)) st.pref = fresh().pref;
+    if (!Array.isArray(st.badges)) st.badges = [];
+    Object.keys(st.items).forEach(k => { if (!isObj(st.items[k])) delete st.items[k]; });
+    return st;
+  }
+  function load(id) {
+    let raw;
+    try { raw = JSON.parse(localStorage.getItem(keyOf(id)) || 'null'); } catch (e) { raw = null; }
+    const st = sanitize(raw);
     // v1 → v2：復習ボックスがない記録は連続正解数から作る
     Object.values(st.items).forEach(r => {
       if (r.box === undefined) { r.box = Math.min(r.s, INTERVALS.length - 1); r.due = today(); }
@@ -86,8 +98,8 @@
       setTimeout(() => { toast(`🎉 今日の目標 ${goal}問 達成！`); sound.done(); }, 400);
     }
   }
-  function record(id, ok) {
-    const r = S.items[id] || (S.items[id] = { c: 0, w: 0, s: 0, box: 0, due: today() });
+  const blank = () => ({ c: 0, w: 0, s: 0, box: 0, due: today() });
+  function applyResult(r, ok) {
     if (ok) {
       r.c++; r.s++;
       r.box = Math.min((r.box || 0) + 1, INTERVALS.length - 1);
@@ -95,6 +107,9 @@
       r.w++; r.s = 0; r.box = 0;
     }
     r.due = addDays(INTERVALS[r.box]);
+  }
+  function record(id, ok) {
+    applyResult(S.items[id] || (S.items[id] = blank()), ok);
     touchDay();
     save();
   }
@@ -540,6 +555,7 @@
       if (done) return;
       done = true;
       const ok = typed !== null && isTypedCorrect(typed, it.a);
+      const before = S.items[it.id] ? { ...S.items[it.id] } : null;   // 「正解にする」で元にもどすため
       record(it.id, ok);
       ok ? sound.ok() : sound.ng();
       if (ok && norm(typed) !== norm(it.a) && isReadingMatch(typed, it.a)) toast(`ひらがなでも正解。本番では漢字で「${it.a}」と書こう`);
@@ -554,8 +570,8 @@
         const fix = document.createElement('button');
         fix.className = 'linkbtn fix'; fix.textContent = '自分の答えも正しい（正解にする）';
         fix.onclick = () => {
-          const r = S.items[it.id];
-          r.w--; r.c++; r.s = 1; r.box = 1; r.due = addDays(INTERVALS[1]); save();
+          S.items[it.id] = before ? { ...before } : blank();
+          applyResult(S.items[it.id], true); save();
           entry.ok = true;
           $('#fb .feedback').outerHTML = feedback(true, it.a, it.e);
           input.classList.replace('is-ng', 'is-ok');
@@ -573,6 +589,7 @@
   function startTimeAttack(pool) {
     const st = { left: TA_SECONDS, score: 0, log: [], queue: shuffle(pool), qi: 0 };
     const end = () => {
+      st.over = true;
       stopTimer(); onKey(null);
       const best = S.best.ta || 0;
       if (st.score > best) S.best.ta = st.score;
@@ -602,7 +619,7 @@
         <div class="choices">
           ${opts.map((o, k) => `<button class="choice" data-k="${k}"><span class="no">${k + 1}</span><span>${esc(o)}</span></button>`).join('')}
         </div>`;
-      $('.quit').onclick = () => { if (confirm('タイムアタックをやめますか？')) { stopTimer(); renderHome(); } };
+      $('.quit').onclick = () => { if (confirm('タイムアタックをやめますか？')) { st.over = true; stopTimer(); renderHome(); } };
       let done = false;
       const answer = k => {
         if (done) return;
@@ -615,7 +632,7 @@
           b.disabled = true;
           if (opts[j] === it.a) b.classList.add('correct'); else if (j === k) b.classList.add('wrong');
         });
-        setTimeout(() => { if (timer) ask(); }, ok ? 350 : 900);
+        setTimeout(() => { if (!st.over && timer) ask(); }, ok ? 350 : 900);
       };
       $$('.choice').forEach(b => b.onclick = () => answer(+b.dataset.k));
       onKey(e => { if (/^[1-4]$/.test(e.key)) answer(+e.key - 1); });
@@ -1062,11 +1079,12 @@
       if (!f) return;
       try {
         const data = JSON.parse(await f.text());
-        if (!data || typeof data.items !== 'object') throw new Error('bad');
+        if (!isObj(data) || !isObj(data.items)) throw new Error('bad');
         if (!confirm('いまの記録を、読みこんだファイルの記録で置きかえます。よろしいですか？')) return;
-        S = Object.assign(fresh(), data);
-        S.settings = Object.assign(fresh().settings, S.settings);
-        save(); applySettings(); toast('記録を読みこみました'); renderHome();
+        // 保存してから読みなおし、古い形式の移行や形のチェックを通す
+        localStorage.setItem(keyOf(P.cur), JSON.stringify(data));
+        S = load(P.cur); save();
+        applySettings(); toast('記録を読みこみました'); renderHome();
       } catch (err) { toast('ファイルを読みこめませんでした'); }
     };
     $('#reset').onclick = () => {
@@ -1104,5 +1122,5 @@
   }
 
   // テスト用に一部の関数を公開
-  window.__shakai = { isTypedCorrect, norm, choicesFor };
+  window.__shakai = { isTypedCorrect, norm, choicesFor, idOf: q => (ALL.find(it => it.q === q) || {}).id };
 })();

@@ -1,5 +1,5 @@
 /* オフラインでも使えるように、アプリの画面を構成するファイルをキャッシュする */
-const CACHE = 'shakai-drill-v8';
+const CACHE = 'shakai-drill-v9';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
   './css/style.css',

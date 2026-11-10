@@ -114,13 +114,14 @@
         </div>
         <div class="palette">${ex.items.map((x, k) => `<button class="pal ${ex.ans[k] !== null ? 'done' : ''} ${k === ex.i ? 'cur' : ''}" data-j="${k}">${k + 1}</button>`).join('')}</div>
         <button class="btn block" id="submit">提出して採点する</button>`;
-      $('.quit').onclick = () => { if (confirm('テストを中止しますか？（採点されません）')) { stop(); menu(); } };
+      $('.quit').onclick = () => { if (confirm('テストを中止しますか？（採点されません）')) { ex.over = true; stop(); menu(); } };
       const go = j => { ex.i = Math.max(0, Math.min(ex.items.length - 1, j)); show(ex); };
       $$('.choice').forEach(b => b.onclick = () => {
         ex.ans[ex.i] = +b.dataset.k;
         // 選んだら自動で次の未解答の問題へ進む
         const next = ex.ans.findIndex((a, k) => a === null && k > ex.i);
-        setTimeout(() => go(next >= 0 ? next : ex.i), 180);
+        // 採点後や別の画面に移ったあとは動かさない
+        setTimeout(() => { if (!ex.over && $('#exam-time')) go(next >= 0 ? next : ex.i); }, 180);
         $$('.choice').forEach(c => c.classList.toggle('picked', c === b));
       });
       $('#prev').onclick = () => go(ex.i - 1);
@@ -140,6 +141,8 @@
     }
 
     function grade(ex) {
+      if (ex.over) return;   // 二重に採点しない
+      ex.over = true;
       App.onKey(null);
       const res = ex.items.map((it, k) => {
         const pick = ex.ans[k] === null ? null : ex.opts[k][ex.ans[k]];

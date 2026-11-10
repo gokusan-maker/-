@@ -168,6 +168,44 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     p.removeAllListeners('dialog'); p.on('dialog', d => d.accept());
     await p.click('#home');
   });
+  await step('不具合の再発防止', async () => {
+    // こわれたバックアップを読みこんでも、アプリが動き続けること
+    await p.click('#btn-settings');
+    await p.setInputFiles('#file', { name: 'bad.json', mimeType: 'application/json', buffer: Buffer.from('{"items":{},"days":null,"sort":5,"ext":[]}') });
+    await p.waitForSelector('.stats');
+    await p.reload(); await p.waitForSelector('.stats');
+    await p.evaluate(() => localStorage['shakai-drill-v1'] = '{"items":null,"days":null}');
+    await p.reload(); await p.waitForSelector('.stats');
+    // 「正解にする」で連続正解が失われないこと（g1の全問を3回連続正解にしておく）
+    await p.evaluate(() => {
+      const S = JSON.parse(localStorage['shakai-drill-v1']);
+      S.pref = { units: ['g1'], count: 10 };
+      window.SHAKAI.UNITS.find(u => u.id === 'g1').items.forEach(it => { S.items[it.id] = { c: 3, w: 0, s: 3, box: 3, due: '2000-01-01' }; });
+      localStorage['shakai-drill-v1'] = JSON.stringify(S);
+    });
+    await p.reload();
+    await p.click('[data-mode=write]'); await p.click('#start');
+    const qid = await p.evaluate(() => window.__shakai.idOf(document.querySelector('.qt').textContent));
+    await p.fill('#win', 'まちがい'); await p.click('button[type=submit]'); await p.click('.fix');
+    const r = await p.evaluate(q => JSON.parse(localStorage['shakai-drill-v1']).items[q], qid);
+    if (r.s !== 4 || r.box !== 4 || r.w !== 0) throw new Error('正解にしたあとの記録 ' + JSON.stringify(r));
+    await p.click('.quit'); await p.click('#home');
+    // 実力テスト：最後の問題を選んですぐ提出しても、二重に採点されないこと
+    await p.click('[data-mode="x:exam"]'); await p.click('[data-c=mini]');
+    for (let i = 0; i < 14; i++) { await p.click('.choice[data-k="0"]'); await p.waitForTimeout(250); }
+    await p.click('.choice[data-k="0"]'); await p.click('#submit');
+    await p.waitForTimeout(500);
+    if (!(await p.$('.field-scores'))) throw new Error('採点画面が消えた');
+    const n = await p.evaluate(() => JSON.parse(localStorage['shakai-drill-v1']).ext.exam.history.length);
+    if (n !== 1) throw new Error('実力テストの記録が ' + n + '件');
+    await p.click('#back'); await p.click('#home');
+    // ぜんぶ見つけよう：すぐに答えを見たときは、解いた数がふえないこと
+    const d0 = await p.evaluate(() => Object.values(JSON.parse(localStorage['shakai-drill-v1']).days).reduce((a, b) => a + b, 0));
+    await p.click('[data-mode="x:map"]'); await p.click('[data-ch=capdiff]'); await p.click('#giveup');
+    const d1 = await p.evaluate(() => Object.values(JSON.parse(localStorage['shakai-drill-v1']).days).reduce((a, b) => a + b, 0));
+    if (d1 !== d0) throw new Error('答えを見ただけで解いた数がふえた');
+    await p.click('#back'); await p.click('#home');
+  });
   await step('旧形式の記録の移行', async () => {
     await p.evaluate(() => localStorage['shakai-drill-v1'] = JSON.stringify({ v: 1, items: { 'g1-01': { c: 2, w: 1, s: 2 } }, days: {}, lastDay: null, streak: 0, sort: { played: 0, perfect: 0 }, pref: { units: ['g1'], count: 10 } }));
     await p.goto(URL);

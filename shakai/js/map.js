@@ -198,7 +198,8 @@
           const prev = s.chal[c.id];
           if (!prev || time < prev.time) { s.chal[c.id] = { time, miss }; best = '🏆 最高記録！'; }
         }
-        App.touchDay(want.size); App.save();
+        if (found.size) App.touchDay(found.size);
+        App.save();
         $('#chctl').style.display = 'none';
         $('#fb').innerHTML = `<div class="card feedback ${gaveUp ? 'ng' : ''}">
             <div class="verdict">${gaveUp ? '答え' : `🎉 ぜんぶ見つけた！ ${best}`}</div>
