@@ -21,7 +21,9 @@
   const SORT_ROUNDS = 5;                  // 年代ならべかえの出題数
   const TA_SECONDS = 60;                  // タイムアタックの制限時間
   const REVIEW_MAX = 20;                  // 今日の復習・苦手復習の最大出題数
-  const STORE_KEY = 'shakai-drill-v1';
+  const STORE_KEY = 'shakai-drill-v1';            // 最初のユーザーの記録（以前からのキー）
+  const PROFILE_KEY = 'shakai-drill-profiles';    // ユーザーの一覧
+  const USER_ICONS = ['🙂', '🐱', '🐶', '🐰', '🐻', '🦊', '🐼', '🐸', '🐧', '🦁'];
 
   // 選択肢グループごとの答えの一覧（4択の誤答に使う）
   const GROUP = {};
@@ -42,16 +44,29 @@
     pref: { units: UNITS.map(u => u.id), count: 10 },
     settings: { sound: true, big: false, goal: 20 }
   });
-  let S;
-  try { S = Object.assign(fresh(), JSON.parse(localStorage.getItem(STORE_KEY) || 'null') || {}); }
-  catch (e) { S = fresh(); }
-  S.settings = Object.assign(fresh().settings, S.settings);
-  // v1 → v2：復習ボックスがない記録は連続正解数から作る
-  Object.values(S.items).forEach(r => {
-    if (r.box === undefined) { r.box = Math.min(r.s, INTERVALS.length - 1); r.due = today(); }
-  });
-  S.v = 2;
-  const save = () => { try { localStorage.setItem(STORE_KEY, JSON.stringify(S)); } catch (e) { /* 保存できない環境 */ } };
+  // きょうだいなどで使い分けられるよう、ユーザーごとに記録を分けて保存する
+  const keyOf = id => id === 'p1' ? STORE_KEY : `${STORE_KEY}:${id}`;
+  let P;
+  try { P = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null'); } catch (e) { P = null; }
+  if (!P || !Array.isArray(P.list) || !P.list.length) P = { list: [{ id: 'p1', name: 'わたし', icon: '🙂' }], cur: 'p1' };
+  if (!P.list.some(u => u.id === P.cur)) P.cur = P.list[0].id;
+  const saveProfiles = () => { try { localStorage.setItem(PROFILE_KEY, JSON.stringify(P)); } catch (e) { /* 保存できない環境 */ } };
+  const curUser = () => P.list.find(u => u.id === P.cur);
+
+  function load(id) {
+    let st;
+    try { st = Object.assign(fresh(), JSON.parse(localStorage.getItem(keyOf(id)) || 'null') || {}); }
+    catch (e) { st = fresh(); }
+    st.settings = Object.assign(fresh().settings, st.settings);
+    // v1 → v2：復習ボックスがない記録は連続正解数から作る
+    Object.values(st.items).forEach(r => {
+      if (r.box === undefined) { r.box = Math.min(r.s, INTERVALS.length - 1); r.due = today(); }
+    });
+    st.v = 2;
+    return st;
+  }
+  let S = load(P.cur);
+  const save = () => { try { localStorage.setItem(keyOf(P.cur), JSON.stringify(S)); } catch (e) { /* 保存できない環境 */ } };
 
   const isMastered = id => (S.items[id] || {}).s >= MASTER;
   const isWeak = id => { const r = S.items[id]; return !!r && r.w > 0 && r.s < MASTER; };
@@ -62,6 +77,7 @@
     if (S.lastDay !== t) {
       S.streak = S.lastDay === addDays(-1) ? S.streak + 1 : 1;
       S.lastDay = t;
+      S.bestStreak = Math.max(S.bestStreak || 0, S.streak);
     }
     const before = S.days[t] || 0;
     S.days[t] = before + n;
@@ -81,6 +97,42 @@
     r.due = addDays(INTERVALS[r.box]);
     touchDay();
     save();
+  }
+
+  /* ===================== バッジ ===================== */
+  const solved = () => Object.values(S.days).reduce((a, b) => a + b, 0);
+  const masteredN = () => ALL.filter(it => isMastered(it.id)).length;
+  const ext = id => S.ext[id] || {};
+  const examMax = () => Math.max(-1, ...((ext('exam').history || []).map(x => x.score)));
+  const BADGES = [
+    { id: 'first', icon: '🌱', name: 'はじめの一歩', desc: '1問とく', test: () => solved() >= 1 },
+    { id: 'q100', icon: '📗', name: '100問とっぱ', desc: '合計100問とく', test: () => solved() >= 100 },
+    { id: 'q500', icon: '📘', name: '500問とっぱ', desc: '合計500問とく', test: () => solved() >= 500 },
+    { id: 'q1000', icon: '📙', name: '1000問とっぱ', desc: '合計1000問とく', test: () => solved() >= 1000 },
+    { id: 'q3000', icon: '🏆', name: '3000問とっぱ', desc: '合計3000問とく', test: () => solved() >= 3000 },
+    { id: 's3', icon: '🔥', name: '3日つづけた', desc: '3日連続で学習する', test: () => (S.bestStreak || S.streak) >= 3 },
+    { id: 's7', icon: '🔥', name: '1週間つづけた', desc: '7日連続で学習する', test: () => (S.bestStreak || S.streak) >= 7 },
+    { id: 's30', icon: '👑', name: '1か月つづけた', desc: '30日連続で学習する', test: () => (S.bestStreak || S.streak) >= 30 },
+    { id: 'goal', icon: '🎉', name: '目標たっせい', desc: '1日の目標問題数をとく', test: () => S.settings.goal > 0 && Object.values(S.days).some(n => n >= S.settings.goal) },
+    { id: 'm50', icon: '⭐', name: '50問おぼえた', desc: '50問を「覚えた」にする', test: () => masteredN() >= 50 },
+    { id: 'm200', icon: '🌟', name: '200問おぼえた', desc: '200問を「覚えた」にする', test: () => masteredN() >= 200 },
+    { id: 'mall', icon: '💫', name: 'ぜんぶおぼえた', desc: 'すべての問題を「覚えた」にする', test: () => masteredN() >= ALL.length },
+    { id: 'unit', icon: '🎓', name: '単元マスター', desc: '1つの単元の問題をすべて覚える', test: () => UNITS.some(u => u.items.every(it => isMastered(it.id))) },
+    { id: 'tryall', icon: '🧭', name: 'ぜんぶの単元に挑戦', desc: 'すべての単元で1問以上とく', test: () => UNITS.every(u => u.items.some(it => S.items[it.id])) },
+    { id: 'sort', icon: '⏳', name: '年代パーフェクト', desc: '年代ならべかえで全問正解', test: () => S.sort.perfect >= 1 },
+    { id: 'ta20', icon: '⚡', name: 'スピードスター', desc: 'タイムアタックで20問正解', test: () => (S.best.ta || 0) >= 20 },
+    { id: 'exam80', icon: '📋', name: '実力テスト80点', desc: '実力テストで80点以上', test: () => examMax() >= 80 },
+    { id: 'exam100', icon: '💯', name: '実力テスト満点', desc: '実力テストで100点', test: () => examMax() >= 100 },
+    { id: 'map', icon: '🗾', name: '白地図の名人', desc: '「ぜんぶ見つけよう」を3種類クリア', test: () => Object.keys(ext('map').chal || {}).length >= 3 },
+    { id: 'sym', icon: '📍', name: '地図記号の名人', desc: '地図記号クイズで10問全問正解', test: () => Object.values(ext('symbols').best || {}).some(v => v >= 10) }
+  ];
+  function checkBadges() {
+    const got = new Set(S.badges || []);
+    const newly = BADGES.filter(b => !got.has(b.id) && b.test());
+    if (!newly.length) return;
+    S.badges = [...got, ...newly.map(b => b.id)];
+    save();
+    newly.forEach((b, k) => setTimeout(() => { toast(`🏅 バッジ獲得：${b.icon} ${b.name}`); sound.done(); }, 700 + k * 2000));
   }
 
   /* ===================== 効果音 ===================== */
@@ -135,6 +187,8 @@
     return base.length >= 2 && x === base;
   }
   function renderStreak() {
+    const u = curUser();
+    $('#who').textContent = P.list.length > 1 ? `${u.icon} ${u.name}` : '';
     $('#streak').innerHTML = S.streak && S.lastDay >= addDays(-1) ? `🔥 <b>${S.streak}</b>日連続` : '';
   }
   function applySettings() {
@@ -178,6 +232,7 @@
   function renderHome() {
     onKey(null); stopTimer();
     renderStreak();
+    checkBadges();
     const answered = ALL.filter(it => S.items[it.id]);
     const c = answered.reduce((n, it) => n + S.items[it.id].c, 0);
     const w = answered.reduce((n, it) => n + S.items[it.id].w, 0);
@@ -568,6 +623,7 @@
   function renderResult(opts) {
     onKey(null); stopTimer();
     renderStreak();
+    checkBadges();
     const log = opts.log;
     const n = log.length, ok = log.filter(l => l.ok).length;
     const r = n ? ok / n : 0;
@@ -801,6 +857,15 @@
         <div class="card stat"><div class="num">${S.streak && S.lastDay >= addDays(-1) ? S.streak : 0}</div><div class="lbl">連続学習日数</div></div>
       </div>
 
+      <h2>バッジ（${(S.badges || []).length}/${BADGES.length}）</h2>
+      <div class="badges">
+        ${BADGES.map(b => {
+          const got = (S.badges || []).includes(b.id);
+          return `<div class="card badge ${got ? 'got' : ''}" title="${esc(b.desc)}"><span class="bi">${got ? b.icon : '🔒'}</span>
+            <b>${esc(b.name)}</b><span class="muted">${esc(b.desc)}</span></div>`;
+        }).join('')}
+      </div>
+
       <h2>最近2週間</h2>
       <div class="card chart">
         ${days.map(x => {
@@ -910,6 +975,17 @@
         <input type="checkbox" class="toggle" data-key="${key}" ${S.settings[key] ? 'checked' : ''}></label>`;
     view.innerHTML = `
       <h2 style="margin-top:4px">⚙ 設定</h2>
+      <h2>ユーザー</h2>
+      <p class="muted">きょうだいなどで使うときは、ユーザーを分けると学習記録が別々に保存されます。</p>
+      <div class="users">
+        ${P.list.map(u => `<div class="card user ${u.id === P.cur ? 'cur' : ''}">
+          <button class="user-main" data-switch="${u.id}"><span class="ui">${u.icon}</span><b>${esc(u.name)}</b>${u.id === P.cur ? '<span class="tag geo">使用中</span>' : ''}</button>
+          <button class="linkbtn" data-rename="${u.id}">名前</button>
+          ${P.list.length > 1 ? `<button class="linkbtn" data-del="${u.id}">削除</button>` : ''}
+        </div>`).join('')}
+        ${P.list.length < 6 ? '<button class="btn sub" id="adduser">＋ ユーザーを追加</button>' : ''}
+      </div>
+      <h2>表示と音</h2>
       ${sw('sound', '効果音', '正解・不正解のときに音を鳴らす')}
       ${sw('big', '文字を大きくする', '問題や選択肢を大きく表示する')}
       <div class="card setting col">
@@ -934,6 +1010,31 @@
       $$('#goal button').forEach(x => x.classList.toggle('on', x === b));
     });
     $('#home').onclick = renderHome;
+    $$('[data-switch]').forEach(b => b.onclick = () => switchUser(b.dataset.switch));
+    $$('[data-rename]').forEach(b => b.onclick = () => {
+      const u = P.list.find(x => x.id === b.dataset.rename);
+      const name = (prompt('名前を入力してください', u.name) || '').trim().slice(0, 10);
+      if (name) { u.name = name; saveProfiles(); renderStreak(); renderSettings(); }
+    });
+    $$('[data-del]').forEach(b => b.onclick = () => {
+      const u = P.list.find(x => x.id === b.dataset.del);
+      if (!confirm(`「${u.name}」と、その学習記録をすべて削除します。よろしいですか？`)) return;
+      try { localStorage.removeItem(keyOf(u.id)); } catch (e) { /* 保存できない環境 */ }
+      P.list = P.list.filter(x => x !== u);
+      if (P.cur === u.id) { P.cur = P.list[0].id; S = load(P.cur); applySettings(); }
+      saveProfiles(); renderStreak(); renderSettings();
+    });
+    const add = $('#adduser');
+    if (add) add.onclick = () => {
+      const name = (prompt('新しいユーザーの名前', '') || '').trim().slice(0, 10);
+      if (!name) return;
+      let n = 2;
+      while (P.list.some(x => x.id === 'p' + n)) n++;
+      const icon = USER_ICONS.find(i => !P.list.some(x => x.icon === i)) || '🙂';
+      P.list.push({ id: 'p' + n, name, icon });
+      saveProfiles();
+      switchUser('p' + n);
+    };
     $('#export').onclick = () => {
       const blob = new Blob([JSON.stringify(S)], { type: 'application/json' });
       const a = document.createElement('a');
@@ -962,6 +1063,16 @@
       }
     };
     window.scrollTo(0, 0);
+  }
+
+  function switchUser(id) {
+    if (id === P.cur) return;
+    P.cur = id; saveProfiles();
+    S = load(id); save();
+    applySettings();
+    const u = curUser();
+    toast(`${u.icon} ${u.name} に切りかえました`);
+    renderHome();
   }
 
   /* ===================== 起動 ===================== */

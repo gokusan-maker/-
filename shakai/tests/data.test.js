@@ -37,6 +37,9 @@ const group = {};
 all.forEach(it => (group[it.g] = group[it.g] || new Set()).add(it.a));
 Object.entries(POOLS).forEach(([g, list]) => list.forEach(a => (group[g] = group[g] || new Set()).add(a)));
 
+// 片方がもう片方をふくむが、別のものとして区別できると確認ずみの組み合わせ
+const OK_NEAR = new Set(['大津市|津市', '新潟水俣病|水俣病', '15か国|5か国', '株主|株主総会', '茶畑|畑'].map(x => x.split('|').sort().join('|')));
+
 const ids = new Set();
 all.forEach(it => {
   check(!ids.has(it.id), `問題IDが重複: ${it.id}`);
@@ -52,6 +55,9 @@ all.forEach(it => {
   } else {
     const others = [...(group[it.g] || [])].filter(a => a !== it.a);
     check(others.length >= 3, `${it.id}: グループ「${it.g}」の誤答候補が3つ未満`);
+    // 「刀狩」と「刀狩令」のように、片方がもう片方をふくむ答えが誤答に出るとまぎらわしい
+    const near = others.filter(o => (o.includes(it.a) || it.a.includes(o)) && !OK_NEAR.has([it.a, o].sort().join('|')));
+    check(!near.length, `${it.id}: 「${it.a}」とまぎらわしい誤答候補がある（${near.join('、')}）。誤答を指定するかグループを分ける`);
   }
 });
 

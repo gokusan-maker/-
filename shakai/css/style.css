@@ -413,3 +413,19 @@ mark { background: #ffe58a; color: #222; border-radius: 3px; padding: 0 1px; }
 .jmap .tile.missed rect { fill: var(--accent); stroke: var(--ink); stroke-width: 2.5; stroke-dasharray: 4 3; }
 .jmap .tile.missed text { fill: #fff; }
 .choice.desc { font-size: 15px; line-height: 1.5; }
+
+/* ===================== ユーザー・バッジ ===================== */
+.who { font-size: 12px; font-weight: 700; background: var(--paper); border: 1px solid var(--line); border-radius: 99px; padding: 2px 8px; white-space: nowrap; max-width: 7.5em; overflow: hidden; text-overflow: ellipsis; }
+.who:empty { display: none; }
+.users { display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.user { display: flex; align-items: center; gap: 4px; padding: 6px 10px; }
+.user.cur { border: 2px solid var(--geo); }
+.user-main { flex: 1; display: flex; align-items: center; gap: 8px; background: none; border: 0; text-align: left; padding: 6px 0; font-size: 16px; }
+.user-main .ui { font-size: 24px; }
+.badges { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+.badge { display: flex; flex-direction: column; align-items: center; text-align: center; padding: 10px 8px; gap: 2px; opacity: .5; }
+.badge.got { opacity: 1; border-color: #e8c35a; box-shadow: 0 0 0 1px #e8c35a inset, var(--shadow); }
+.badge .bi { font-size: 30px; line-height: 1.2; }
+.badge b { font-size: 13px; }
+.badge .muted { font-size: 11px; line-height: 1.4; }
+@media (max-width: 400px) { .topbar:has(.who:not(:empty)) .brand-text { display: none; } }

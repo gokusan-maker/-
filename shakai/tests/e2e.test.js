@@ -137,6 +137,24 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     await p.click('#btn-settings'); await p.click('#goal [data-g="10"]'); await p.click('#home');
     await p.click('#btn-settings'); await p.click('[data-key=big]'); await p.click('[data-key=big]'); await p.click('#home');
   });
+  await step('ユーザーの切りかえとバッジ', async () => {
+    p.removeAllListeners('dialog');
+    p.on('dialog', d => d.type() === 'prompt' ? d.accept('あに') : d.accept());
+    await p.click('#btn-settings'); await p.click('#adduser');
+    if (!(await p.textContent('#who')).includes('あに')) throw new Error('ユーザーが追加されていない');
+    const solvedNew = await p.evaluate(() => Object.keys(JSON.parse(localStorage['shakai-drill-v1:p2'] || '{"items":{}}').items).length);
+    if (solvedNew !== 0) throw new Error('新しいユーザーの記録が空ではない');
+    await p.click('[data-mode=quiz]'); await p.click('#start'); await p.click('.choice[data-k="0"]'); await p.click('.quit'); await p.click('#home');
+    await p.click('#btn-stats');
+    if (!(await p.$('.badge.got'))) throw new Error('はじめの一歩のバッジがない');
+    await p.click('#btn-settings'); await p.click('[data-switch=p1]');
+    const p1 = await p.evaluate(() => Object.keys(JSON.parse(localStorage['shakai-drill-v1']).items).length);
+    if (p1 === 0) throw new Error('最初のユーザーの記録が消えた');
+    await p.click('#btn-settings'); await p.click('[data-del=p2]');
+    if (await p.evaluate(() => localStorage['shakai-drill-v1:p2'] !== undefined)) throw new Error('削除したユーザーの記録が残っている');
+    p.removeAllListeners('dialog'); p.on('dialog', d => d.accept());
+    await p.click('#home');
+  });
   await step('旧形式の記録の移行', async () => {
     await p.evaluate(() => localStorage['shakai-drill-v1'] = JSON.stringify({ v: 1, items: { 'g1-01': { c: 2, w: 1, s: 2 } }, days: {}, lastDay: null, streak: 0, sort: { played: 0, perfect: 0 }, pref: { units: ['g1'], count: 10 } }));
     await p.goto(URL);
