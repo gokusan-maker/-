@@ -86,6 +86,22 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     for (let i = 0; i < 6; i++) { await p.click('.choice[data-k="0"]'); await p.click('#next'); }
     await p.click('#home');
   });
+  await step('実力テスト', async () => {
+    for (let round = 0; round < 2; round++) {
+      await p.click('[data-mode="x:exam"]'); await p.click('[data-c=mini]');
+      const n = await p.$$eval('.pal', x => x.length);
+      if (n !== 15) throw new Error('ミニテストの問題数 ' + n);
+      for (let i = 0; i < 14; i++) { await p.click('.choice[data-k="0"]'); await p.waitForTimeout(250); }
+      await p.click('#submit');   // 1問残して提出（確認ダイアログは自動でOK）
+      await p.waitForSelector('.field-scores');
+      await p.click('#back'); await p.click('#home');
+    }
+    await p.click('[data-mode="x:exam"]');
+    if (!(await p.$('.exam-chart'))) throw new Error('成績グラフがない');
+    // 途中でホームにもどってもタイマーが画面を書きかえないこと
+    await p.click('[data-c=mini]'); await p.click('#btn-home'); await p.waitForTimeout(600);
+    if (!(await p.$('.stats'))) throw new Error('ホームにもどれない');
+  });
   await step('用語さくいん', async () => {
     await p.click('[data-mode="x:search"]'); await p.fill('#sq', 'りあす');
     await p.waitForTimeout(300);

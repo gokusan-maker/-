@@ -387,3 +387,26 @@ mark { background: #ffe58a; color: #222; border-radius: 3px; padding: 0 1px; }
 .tl-goro { display: block; font-size: 12px; color: var(--his); font-weight: 700; margin-top: 2px; }
 .tl-row.hidden-year .tl-year, .tl-row.hidden-year .tl-goro { filter: blur(6px); opacity: .6; transition: filter .2s; }
 .tl-row.hidden-year.peek .tl-year, .tl-row.hidden-year.peek .tl-goro { filter: none; opacity: 1; }
+
+/* ===================== 実力テスト ===================== */
+.exam-time { min-width: 56px; font-variant-numeric: tabular-nums; }
+.exam-time.warn { color: var(--ng); }
+.exam-meta { margin: -2px 2px 8px; font-size: 14px; }
+.choice.picked { border-color: var(--civ); background: color-mix(in srgb, var(--civ) 14%, var(--paper)); }
+.choice.picked .no { background: var(--civ); color: #fff; }
+.exam-nav { margin-top: 12px; }
+.palette { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 6px; margin: 14px 0; }
+.pal { min-height: 36px; border-radius: 8px; border: 1px solid var(--line); background: var(--paper); font-size: 13px; padding: 0; }
+.pal.done { background: var(--civ); color: #fff; border-color: var(--civ); }
+.pal.cur { outline: 3px solid var(--accent); outline-offset: 1px; }
+.field-scores { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 12px; }
+.fs { padding: 10px; text-align: center; }
+.fs .num { font-size: 24px; font-weight: 900; margin-top: 4px; }
+.fs .num small { font-size: 13px; color: var(--muted); }
+.advice { padding: 12px 16px; margin-top: 12px; font-size: 14px; line-height: 1.8; }
+.up { color: var(--ok); font-weight: 900; } .down { color: var(--ng); font-weight: 900; }
+.exam-chart { display: flex; gap: 6px; align-items: flex-end; height: 160px; padding: 12px 10px 8px; }
+.exam-chart .col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; min-width: 0; }
+.exam-chart .col i { display: block; width: 60%; min-height: 2px; background: var(--civ); border-radius: 4px 4px 0 0; }
+.exam-chart .cn { font-size: 11px; font-weight: 700; }
+.exam-chart .cd { font-size: 10px; color: var(--muted); margin-top: 4px; }
