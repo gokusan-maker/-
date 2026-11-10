@@ -118,6 +118,16 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     await p.click('[data-c=mini]'); await p.click('#btn-home'); await p.waitForTimeout(600);
     if (!(await p.$('.stats'))) throw new Error('ホームにもどれない');
   });
+  await step('赤シート', async () => {
+    await p.click('[data-mode="x:notes"]'); await p.click('[data-u=g2]');
+    const a = await p.$('.rs-a');
+    const hidden = await a.evaluate(el => getComputedStyle(el).color === getComputedStyle(el).backgroundColor);
+    if (!hidden) throw new Error('答えがかくれていない');
+    await a.click();
+    if (!(await a.evaluate(el => el.classList.contains('open')))) throw new Error('タップでめくれない');
+    await p.click('#only'); await p.click('#hide'); await p.click('#quiz');
+    await p.click('.choice[data-k="0"]'); await p.click('.quit'); await p.click('#home');
+  });
   await step('用語さくいん', async () => {
     await p.click('[data-mode="x:search"]'); await p.fill('#sq', 'りあす');
     await p.waitForTimeout(300);

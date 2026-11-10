@@ -429,3 +429,17 @@ mark { background: #ffe58a; color: #222; border-radius: 3px; padding: 0 1px; }
 .badge b { font-size: 13px; }
 .badge .muted { font-size: 11px; line-height: 1.4; }
 @media (max-width: 400px) { .topbar:has(.who:not(:empty)) .brand-text { display: none; } }
+
+/* ===================== 赤シート ===================== */
+.sheet-ctl { margin-bottom: 12px; }
+.redsheet { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; counter-reset: rs; }
+.redsheet li { padding: 10px 14px; counter-increment: rs; }
+.rs-q { font-size: 15px; }
+.rs-q::before { content: counter(rs) '. '; color: var(--muted); font-weight: 700; }
+.rs-a {
+  display: inline-block; margin-top: 6px; padding: 4px 12px; border-radius: 8px; border: 0; background: none;
+  font-size: 18px; font-weight: 900; color: #d6463b; text-align: left;
+}
+.redsheet.hiding .rs-a:not(.open) { background: #d6463b; color: #d6463b; min-width: 6em; }
+.redsheet.hiding .rs-a:not(.open) + .rs-e { display: none; }
+.rs-e { font-size: 13px; margin-top: 4px; }
