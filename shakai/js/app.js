@@ -186,9 +186,15 @@
     t.textContent = msg; t.classList.remove('hidden');
     clearTimeout(toast.tm); toast.tm = setTimeout(() => t.classList.add('hidden'), 1800);
   }
+  // 単元ごと・グループごとの答え（同じ時代・テーマの誤答を優先するため）
+  const UNIT_GROUP = {};
+  ALL.forEach(it => { const k = it.unit + '|' + it.g; (UNIT_GROUP[k] = UNIT_GROUP[k] || new Set()).add(it.a); });
   function choicesFor(it) {
-    const wrong = it.ch ? it.ch : [...(GROUP[it.g] || [])].filter(a => a !== it.a);
-    return shuffle([it.a, ...shuffle(wrong).slice(0, 3)]);
+    if (it.ch) return shuffle([it.a, ...shuffle(it.ch).slice(0, 3)]);
+    // 同じ単元の答えを2つまで優先し、残りはグループ全体から選ぶ（同じ時代の人物どうしなど、まぎらわしくする）
+    const near = shuffle([...(UNIT_GROUP[it.unit + '|' + it.g] || [])].filter(a => a !== it.a)).slice(0, 2);
+    const rest = shuffle([...(GROUP[it.g] || [])].filter(a => a !== it.a && !near.includes(a)));
+    return shuffle([it.a, ...near, ...rest].slice(0, 4));
   }
   // 記述の答え合わせ用：全角/半角・空白・中点のゆれをそろえる
   const norm = s => String(s).normalize('NFKC').replace(/[\s・･,、。.]/g, '').replace(/ヶ/g, 'ケ').toLowerCase();

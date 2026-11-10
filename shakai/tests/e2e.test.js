@@ -32,6 +32,16 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     });
     if (r.some(x => !x)) throw new Error(JSON.stringify(r));
   });
+  await step('全問題の選択肢', async () => {
+    const bad = await p.evaluate(() => window.SHAKAI.UNITS.flatMap(u => u.items).filter(it => {
+      for (let k = 0; k < 5; k++) {
+        const c = window.__shakai.choicesFor(it);
+        if (c.length !== 4 || new Set(c).size !== 4 || !c.includes(it.a)) return true;
+      }
+      return false;
+    }).map(it => it.id));
+    if (bad.length) throw new Error('選択肢がおかしい問題: ' + bad.join(', '));
+  });
   await step('4択クイズ', async () => {
     await p.click('[data-mode=quiz]'); await p.click('#start');
     for (let i = 0; i < 10; i++) { await p.click('.choice[data-k="0"]'); await p.click('#next'); }
