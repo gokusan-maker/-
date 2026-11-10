@@ -123,7 +123,7 @@
           <div class="choices">
             ${opts.map((o, k) => `<button class="choice" data-k="${k}"><span class="no">${k + 1}</span><span>${byCity ? o.city : o.climate}</span></button>`).join('')}
           </div>
-          <div id="fb"></div>`;
+          <div id="fb" role="status" aria-live="polite"></div>`;
         App.bindQuit(() => log.length > 0, finish);
         let done = false;
         const answer = k => {

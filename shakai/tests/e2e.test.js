@@ -37,6 +37,14 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     for (let i = 0; i < 10; i++) { await p.click('.choice[data-k="0"]'); await p.click('#next'); }
     await p.click('#home');
   });
+  await step('わからない・おすすめ', async () => {
+    await p.click('[data-mode=quiz]'); await p.click('#start'); await p.click('#idk');
+    if (!(await p.$('.choice.correct'))) throw new Error('わからないで正解が表示されない');
+    await p.click('.quit'); await p.click('#home');
+    await p.click('[data-mode=rec]');
+    if (!(await p.$('.choice'))) throw new Error('おすすめから出題されない');
+    await p.click('.quit');   // 1問も答えていないのでそのままホームへ
+  });
   await step('書いて答える', async () => {
     await p.click('[data-mode=write]'); await p.click('#start');
     await p.fill('#win', 'まちがい'); await p.click('button[type=submit]'); await p.click('.fix'); await p.click('#next');

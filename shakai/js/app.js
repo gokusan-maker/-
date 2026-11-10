@@ -254,6 +254,30 @@
     startChrono: kind => { chronoKind = kind; startSort(); }
   };
 
+  /* ===================== おすすめ単元 ===================== */
+  // 苦手が多い単元 → まだ挑戦していない単元 → 覚えた割合が低い単元 の順にすすめる
+  function recommend() {
+    const rows = UNITS.map(u => ({
+      u,
+      weak: u.items.filter(it => isWeak(it.id)).length,
+      tried: u.items.filter(it => S.items[it.id]).length,
+      rate: u.items.filter(it => isMastered(it.id)).length / u.items.length
+    })).filter(x => x.rate < 1);
+    if (!rows.length) return null;
+    const weak = rows.filter(x => x.weak >= 3).sort((a, b) => b.weak - a.weak)[0];
+    if (weak) return { u: weak.u, why: `苦手な問題が${weak.weak}問あります` };
+    const untried = rows.filter(x => x.tried === 0);
+    if (untried.length) return { u: untried[new Date().getDate() % untried.length].u, why: 'まだ挑戦していない単元です' };
+    const low = rows.sort((a, b) => a.rate - b.rate)[0];
+    return { u: low.u, why: `覚えた割合が${Math.round(low.rate * 100)}%の単元です` };
+  }
+  function startRecommended(u) {
+    // 苦手 → まだ覚えていない問題 の順に10問
+    const order = it => isWeak(it.id) ? 0 : isMastered(it.id) ? 2 : 1;
+    const items = shuffle(u.items).sort((a, b) => order(a) - order(b)).slice(0, 10);
+    startSession('quiz', items, `おすすめ：${u.name}`);
+  }
+
   /* ===================== ホーム ===================== */
   function renderHome() {
     onKey(null); stopTimer();
@@ -265,6 +289,7 @@
     const mastered = ALL.filter(it => isMastered(it.id)).length;
     const weak = ALL.filter(it => isWeak(it.id)).length;
     const due = ALL.filter(it => isDue(it.id)).length;
+    const rec = recommend();
 
     const mode = (id, ico, ttl, dsc, extra = '') =>
       `<button class="mode" data-mode="${id}" ${extra}><span class="ico">${ico}</span><span class="ttl">${ttl}</span><span class="dsc">${dsc}</span></button>`;
@@ -282,6 +307,11 @@
         <span class="due-ico">📅</span>
         <span><b>今日の復習 ${due}問</b><br><span class="muted">忘れかけたころにもう一度。記憶が長持ちします</span></span>
         <span class="due-go">はじめる ›</span></button>` : ''}
+
+      ${rec ? `<button class="card rec-banner" data-mode="rec">
+        <span class="due-ico">${rec.u.icon}</span>
+        <span><span class="muted">📌 きょうのおすすめ</span><br><b>${esc(rec.u.name)}</b><br><span class="muted">${rec.why}</span></span>
+        <span class="due-go">10問 ›</span></button>` : ''}
 
       <h2>問題を解く</h2>
       <div class="modes">
@@ -328,6 +358,7 @@
         ta: () => renderSetup('ta'),
         weak: startWeak,
         due: startDue,
+        rec: () => startRecommended(rec.u),
         sort: startSort
       })[m]();
     });
@@ -477,12 +508,15 @@
       <div class="choices">
         ${opts.map((o, k) => `<button class="choice" data-k="${k}"><span class="no">${k + 1}</span><span>${esc(o)}</span></button>`).join('')}
       </div>
-      <div id="fb"></div>`;
+      <button class="linkbtn idk" id="idk">わからない（答えを見る）</button>
+      <div id="fb" role="status" aria-live="polite"></div>`;
     let done = false;
     const answer = k => {
       if (done) return;
       done = true;
-      const pick = opts[k], ok = pick === it.a;
+      $('#idk').style.visibility = 'hidden';
+      // k = -1 は「わからない」。あてずっぽうで正解するより、苦手として復習に回す
+      const pick = k < 0 ? '（わからない）' : opts[k], ok = pick === it.a;
       record(it.id, ok);
       ok ? sound.ok() : sound.ng();
       sess.log.push({ id: it.id, ok, pick });
@@ -494,8 +528,10 @@
       showNext(sess, ok, it);
     };
     $$('.choice').forEach(b => b.onclick = () => answer(+b.dataset.k));
+    $('#idk').onclick = () => answer(-1);
     onKey(e => {
       if (!done && /^[1-4]$/.test(e.key)) answer(+e.key - 1);
+      else if (!done && e.key === '0') answer(-1);
       else if (done && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); next(sess); }
     });
   }
@@ -547,7 +583,7 @@
           <button type="submit" class="btn">答え合わせ</button>
         </div>
       </form>
-      <div id="fb"></div>`;
+      <div id="fb" role="status" aria-live="polite"></div>`;
     const input = $('#win');
     setTimeout(() => input.focus({ preventScroll: true }), 50);
     let done = false;
@@ -753,7 +789,7 @@
         <div class="choices">
           ${opts.map((o, k) => `<button class="choice" data-k="${k}"><span class="no">${k + 1}</span><span>${byYear ? o.y + '年' : esc(o.t)}</span></button>`).join('')}
         </div>
-        <div id="fb"></div>`;
+        <div id="fb" role="status" aria-live="polite"></div>`;
       bindQuit(() => log.length > 0, finish);
       let done = false;
       const answer = k => {
@@ -807,7 +843,7 @@
               ${checked ? `<span class="yr">${e.y}年</span>` : ''}</button>`;
           }).join('')}
         </div>
-        <div id="fb"></div>
+        <div id="fb" role="status" aria-live="polite"></div>
         <div class="next-wrap">
           ${checked
             ? `<button class="btn block" id="next">${st.round + 1 < SORT_ROUNDS ? '次の問題へ' : '結果を見る'}</button>`
@@ -930,10 +966,12 @@
         <div>${esc(it.q)}<br><span class="a">→ ${esc(it.a)}</span></div></div>`).join('')}</div>`
         : '<p class="muted">まちがえた問題はまだありません。</p>'}
 
-      <div class="row" style="margin-top:20px">
+      <div class="row no-print" style="margin-top:20px">
         <button class="btn sub" id="print">📄 プリントをつくる</button>
-        <button class="btn sub" id="home">ホームへ</button>
-      </div>`;
+        <button class="btn sub" id="printstats">🖨 この記録を印刷</button>
+      </div>
+      <div class="row no-print" style="margin-top:10px"><button class="btn sub" id="home">ホームへ</button></div>`;
+    $('#printstats').onclick = () => window.print();
     $('#home').onclick = renderHome;
     $('#print').onclick = renderPrint;
     window.scrollTo(0, 0);

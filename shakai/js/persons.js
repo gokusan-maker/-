@@ -59,7 +59,7 @@
           <div class="choices">
             ${opts.map((o, k) => `<button class="choice desc" data-k="${k}"><span class="no">${k + 1}</span><span>${esc(describe(o.q))}</span></button>`).join('')}
           </div>
-          <div id="fb"></div>`;
+          <div id="fb" role="status" aria-live="polite"></div>`;
         App.bindQuit(() => log.length > 0, finish);
         let done = false;
         const answer = k => {

@@ -182,7 +182,7 @@
           <p class="qt"><b>${esc(title)}</b>をぜんぶタップしよう${c.note ? `<br><span class="muted">${esc(c.note)}</span>` : ''}</p>
           <div class="muted" id="chmiss">まちがい 0回</div></div>
         <div class="card map-card">${mapSvg({ labels: c.labels, region: false })}</div>
-        <div id="fb"></div>
+        <div id="fb" role="status" aria-live="polite"></div>
         <div class="row" id="chctl"><button class="btn sub" id="giveup">答えを見る</button></div>`;
       const end = gaveUp => {
         over = true;
@@ -276,7 +276,7 @@
             <p class="qt">${prompt}</p></div>
           <div class="card map-card">${mapSvg({ labels: kind !== 'where' && kind !== 'name', highlight: kind === 'where' ? null : p.i, region: kind !== 'region' && kind !== 'where' && kind !== 'name' })}</div>
           ${opts.length ? `<div class="choices ${kind === 'region' ? 'grid2' : ''}">${opts.map((o, k) => `<button class="choice" data-k="${k}"><span class="no">${k + 1}</span><span>${esc(o)}</span></button>`).join('')}</div>` : ''}
-          <div id="fb"></div>`;
+          <div id="fb" role="status" aria-live="polite"></div>`;
         App.bindQuit(() => log.length > 0, finish);
 
         let done = false;

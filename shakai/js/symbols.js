@@ -93,7 +93,7 @@
           <div class="choices ${kind === 'n2s' ? 'sym-grid' : ''}">
             ${opts.map((o, k) => `<button class="choice" data-k="${k}"><span class="no">${k + 1}</span>${kind === 's2n' ? `<span>${o.name}</span>` : icon(o)}</button>`).join('')}
           </div>
-          <div id="fb"></div>`;
+          <div id="fb" role="status" aria-live="polite"></div>`;
         App.bindQuit(() => log.length > 0, finish);
         let done = false;
         const answer = k => {
