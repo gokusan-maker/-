@@ -475,3 +475,9 @@ mark { background: #ffe58a; color: #222; border-radius: 3px; padding: 0 1px; }
 .glegend div { display: flex; align-items: center; gap: 6px; }
 .glegend i { display: inline-block; width: 12px; height: 12px; border-radius: 3px; flex: none; }
 .glegend b { margin-left: auto; }
+
+.forecast { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; padding: 10px 8px; text-align: center; }
+.forecast .fc { display: flex; flex-direction: column; align-items: center; font-size: 12px; }
+.forecast .fd { color: var(--muted); line-height: 1.3; }
+.forecast b { font-size: 18px; font-weight: 900; margin-top: 2px; }
+.forecast small { font-size: 10px; color: var(--muted); }

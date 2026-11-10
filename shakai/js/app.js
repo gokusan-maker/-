@@ -920,6 +920,12 @@
     const weakList = ALL.filter(it => isWeak(it.id))
       .sort((a, b) => S.items[b.id].w - S.items[a.id].w).slice(0, 10);
     const wd = ['日', '月', '火', '水', '木', '金', '土'];
+    // これから7日間の復習予定（期限切れは今日にまとめる）
+    const forecast = [];
+    for (let i = 0; i < 7; i++) {
+      const d = addDays(i);
+      forecast.push({ d, n: Object.values(S.items).filter(r => i === 0 ? r.due <= d : r.due === d).length });
+    }
 
     view.innerHTML = `
       <h2 style="margin-top:4px">📊 学習の記録</h2>
@@ -935,6 +941,14 @@
           const got = (S.badges || []).includes(b.id);
           return `<div class="card badge ${got ? 'got' : ''}" title="${esc(b.desc)}"><span class="bi">${got ? b.icon : '🔒'}</span>
             <b>${esc(b.name)}</b><span class="muted">${esc(b.desc)}</span></div>`;
+        }).join('')}
+      </div>
+
+      <h2>これから7日間の復習予定</h2>
+      <div class="card forecast">
+        ${forecast.map((x, i) => {
+          const dt = new Date(x.d + 'T00:00:00');
+          return `<div class="fc"><span class="fd">${i === 0 ? '今日' : i === 1 ? '明日' : `${dt.getMonth() + 1}/${dt.getDate()}`}<br><small>${wd[dt.getDay()]}</small></span><b>${x.n}</b><small>問</small></div>`;
         }).join('')}
       </div>
 
