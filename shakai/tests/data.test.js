@@ -10,7 +10,7 @@ const vm = require('vm');
 // ブラウザ用のスクリプトを window つきの環境で読みこむ
 const ctx = { window: {} };
 vm.createContext(ctx);
-for (const f of ['data.js', 'readings.js', 'map.js', 'symbols.js', 'climate.js', 'graphs.js']) {
+for (const f of ['data.js', 'readings.js', 'map.js', 'symbols.js', 'climate.js', 'graphs.js', 'lesson.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx, { filename: f });
 }
 const { FIELDS, UNITS, EVENTS, POOLS } = ctx.window.SHAKAI;
@@ -117,6 +117,20 @@ ctx.window.SHAKAI_GRAPHS.forEach(g => {
   all.filter(it => it.q.startsWith(g.name + 'の生産量が日本一')).forEach(it => {
     check(it.a === g.top[0][0], `${it.id}: グラフ「${g.name}」の1位（${g.top[0][0]}）と答え（${it.a}）が食いちがう`);
   });
+});
+
+/* ---------- 授業プリント ---------- */
+UNITS.forEach(u => {
+  const doc = ctx.window.SHAKAI_LESSON.build(ctx.window.SHAKAI, { unitId: u.id, no: 1 });
+  const again = ctx.window.SHAKAI_LESSON.build(ctx.window.SHAKAI, { unitId: u.id, no: 1 });
+  check(doc.html === again.html, `${u.id}: 授業プリントが作るたびに変わる`);
+  check(doc.test === 20, `${u.id}: 確認テストが20問ではない（${doc.test}問）`);
+  check(doc.practice === Math.min(40, u.items.length), `${u.id}: 練習問題の数がおかしい（${doc.practice}問）`);
+  // 解答の記号（ア〜エ）が、選択肢の正解と合っているか
+  const choiceQs = (doc.html.match(/<div class="lp-ch">/g) || []).length;
+  const keys = (doc.html.match(/<b>[アイウエ]<\/b>　/g) || []).length;
+  check(choiceQs === keys, `${u.id}: 記号問題の数（${choiceQs}）と解答の記号の数（${keys}）が合わない`);
+  check(!/undefined|NaN/.test(doc.html), `${u.id}: 授業プリントに undefined などがまじっている`);
 });
 
 /* ---------- 結果 ---------- */

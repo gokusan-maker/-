@@ -229,6 +229,50 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     if (d1 !== d0) throw new Error('答えを見ただけで解いた数がふえた');
     await p.click('#back'); await p.click('#home');
   });
+  await step('相棒モンスター', async () => {
+    await p.click('#btn-home');
+    await p.evaluate(() => { const S = JSON.parse(localStorage['shakai-drill-v1']); delete S.ext.monster; localStorage['shakai-drill-v1'] = JSON.stringify(S); });
+    await p.goto(URL);
+    if (!(await p.$('#mon-card'))) throw new Error('ホームに相棒カードがない');
+    // 10問正解でXP100（Lv1→Lv4）。コインは少なくとも 50 + 正解2×10 + レベルアップ10×3 = 100
+    await p.click('[data-mode=quiz]'); await p.click('[data-n="10"]'); await p.click('#start');
+    for (let i = 0; i < 10; i++) {
+      await p.evaluate(() => { const ov = document.querySelector('.mon-overlay'); if (ov) ov.remove(); });
+      const k = await p.evaluate(() => { const q = document.querySelector('.qt').textContent; const it = window.SHAKAI.UNITS.flatMap(u => u.items).find(x => x.q === q); return [...document.querySelectorAll('.choice')].findIndex(b => b.textContent.includes(it.a)); });
+      await p.click(`.choice[data-k="${k}"]`); await p.click('#next');
+    }
+    await p.waitForTimeout(700);
+    const lv = await p.evaluate(() => window.SHAKAI_MONSTER.levelInfo(JSON.parse(localStorage['shakai-drill-v1']).ext.monster.xp).level);
+    if (lv !== 4) throw new Error('レベルが ' + lv);
+    await p.evaluate(() => { const ov = document.querySelector('.mon-overlay'); if (ov) ov.click(); });
+    const m = await p.evaluate(() => JSON.parse(localStorage['shakai-drill-v1']).ext.monster);
+    // 目標達成やバッジのコインが加わることもあるので、最低額だけを確かめる
+    if (m.xp !== 100 || m.coins < 100) throw new Error('XP・コインの計算 ' + JSON.stringify({ xp: m.xp, coins: m.coins }));
+    await p.evaluate(() => { const S = JSON.parse(localStorage['shakai-drill-v1']); S.ext.monster.coins = 500; localStorage['shakai-drill-v1'] = JSON.stringify(S); });
+    await p.goto(URL); await p.click('#mon-card');
+    await p.click('[data-food=onigiri]');
+    await p.click('[data-tab=wear]'); await p.click('[data-wear=bell]');
+    await p.click('[data-tab=room]'); await p.click('[data-room=kofun]');
+    await p.click('[data-tab=book]');
+    const m2 = await p.evaluate(() => JSON.parse(localStorage['shakai-drill-v1']).ext.monster);
+    if (m2.wear.neck !== 'bell' || m2.room !== 'kofun' || m2.coins !== 500 - 20 - 50 - 100) throw new Error('ショップ ' + JSON.stringify(m2));
+    // 呼吸のアニメーションで動き続けているので、タップは直接送る
+    await p.$eval('.mon-tap', g => g.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+    await p.click('#home');
+  });
+  await step('授業用プリント', async () => {
+    await p.click('#btn-prints');
+    const n = await p.$$eval('.pr-row', x => x.length);
+    if (n !== 21) throw new Error('授業プリントの単元数 ' + n);
+    const href = await p.$eval('.pr-dl', a => decodeURI(a.getAttribute('href')));
+    if (!href.startsWith('print/授業プリント/第01回_')) throw new Error('PDFのリンク ' + href);
+    await p.click('[data-m="90"]');
+    await p.click('.pr-view[data-u=h3]');
+    const pages = await p.$$eval('.lp-page', x => x.length);
+    if (pages < 5) throw new Error('プレビューのページ数 ' + pages);
+    if (!(await p.textContent('.lp-cover')).includes('90分')) throw new Error('授業時間が反映されない');
+    await p.click('#back'); await p.click('#home');
+  });
   await step('旧形式の記録の移行', async () => {
     await p.evaluate(() => localStorage['shakai-drill-v1'] = JSON.stringify({ v: 1, items: { 'g1-01': { c: 2, w: 1, s: 2 } }, days: {}, lastDay: null, streak: 0, sort: { played: 0, perfect: 0 }, pref: { units: ['g1'], count: 10 } }));
     await p.goto(URL);

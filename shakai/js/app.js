@@ -84,7 +84,13 @@
   const isWeak = id => { const r = S.items[id]; return !!r && r.w > 0 && r.s < MASTER; };
   const isDue = id => { const r = S.items[id]; return !!r && r.due <= today(); };
 
-  function touchDay(n = 1) {
+  // 拡張モード向けの通知：study（問題をといた）・goal（目標達成）・badge（バッジ獲得）
+  const LISTENERS = {};
+  const on = (name, fn) => (LISTENERS[name] = LISTENERS[name] || []).push(fn);
+  const emit = (name, data) => (LISTENERS[name] || []).forEach(fn => { try { fn(data); } catch (e) { console.error(e); } });
+
+  // meta：{ ok: 正解か, field: 分野 }。拡張モードからは meta なしで呼ばれる
+  function touchDay(n = 1, meta) {
     const t = today();
     if (S.lastDay !== t) {
       S.streak = S.lastDay === addDays(-1) ? S.streak + 1 : 1;
@@ -96,7 +102,9 @@
     const goal = S.settings.goal;
     if (goal && before < goal && S.days[t] >= goal) {
       setTimeout(() => { toast(`🎉 今日の目標 ${goal}問 達成！`); sound.done(); }, 400);
+      emit('goal', goal);
     }
+    emit('study', { n, ok: meta ? meta.ok : null, field: meta ? meta.field : null });
   }
   const blank = () => ({ c: 0, w: 0, s: 0, box: 0, due: today() });
   function applyResult(r, ok) {
@@ -110,7 +118,7 @@
   }
   function record(id, ok) {
     applyResult(S.items[id] || (S.items[id] = blank()), ok);
-    touchDay();
+    touchDay(1, { ok, field: UNIT[ITEM[id].unit].field });
     save();
   }
 
@@ -148,6 +156,7 @@
     S.badges = [...got, ...newly.map(b => b.id)];
     save();
     newly.forEach((b, k) => setTimeout(() => { toast(`🏅 バッジ獲得：${b.icon} ${b.name}`); sound.done(); }, 700 + k * 2000));
+    newly.forEach(b => emit('badge', b));
   }
 
   /* ===================== 効果音 ===================== */
@@ -236,11 +245,14 @@
 
   /* ===================== 拡張モードの登録 ===================== */
   const EXT_MODES = [];
+  const HOME_CARDS = [];   // { html: () => string, bind: () => void }
   const App = {
     view, $, $$, esc, shuffle, toast, sound, onKey, today, touchDay, save,
     get state() { return S; },
     extState(id) { return S.ext[id] || (S.ext[id] = {}); },
     registerMode(m) { EXT_MODES.push(m); },
+    registerHomeCard(c) { HOME_CARDS.push(c); },
+    on: (name, fn) => on(name, fn),
     goHome: () => renderHome(),
     showResult: (opts) => renderResult(opts),
     header: (i, n) => qheader(i, n),
@@ -309,6 +321,8 @@
         <div class="card stat"><div class="num">${mastered}<small class="of">/${ALL.length}</small></div><div class="lbl">覚えた問題</div></div>
       </div>
 
+      ${HOME_CARDS.map(c => c.html()).join('')}
+
       ${due ? `<button class="card due-banner" data-mode="due">
         <span class="due-ico">📅</span>
         <span><b>今日の復習 ${due}問</b><br><span class="muted">忘れかけたころにもう一度。記憶が長持ちします</span></span>
@@ -354,6 +368,7 @@
       同じ問題に${MASTER}回連続で正解すると「覚えた」になります。正解した問題は1日後・3日後・1週間後…と間をあけて「今日の復習」に出てきます。</p>
     `;
 
+    HOME_CARDS.forEach(c => c.bind && c.bind());
     $$('[data-mode]').forEach(b => b.onclick = () => {
       const m = b.dataset.mode;
       if (m.startsWith('x:')) return EXT_MODES.find(x => x.id === m.slice(2)).start(App);
