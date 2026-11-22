@@ -294,7 +294,11 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     const qs = await p.$$eval('.lp-q', x => x.length);
     if (qs !== 50) throw new Error('総合テストの問題数 ' + qs);
     if (!(await p.textContent('.lp-kind')).includes('（B）')) throw new Error('テストの種類が表示されない');
-    await p.click('#back'); await p.click('.pr-tabs [data-tab=lesson]'); await p.click('#ver [data-v=A]');
+    await p.click('#back');
+    await p.click('.pr-tabs [data-tab=work]'); await p.click('.pr-work[data-w=pref]');
+    if (await p.$$eval('.wk-map rect', x => x.length) < 47) throw new Error('白地図ワークの地図がない');
+    await p.click('#back'); await p.click('.pr-tabs [data-tab=test]');
+    await p.click('.pr-tabs [data-tab=lesson]'); await p.click('#ver [data-v=A]');
     await p.click('#home');
   });
   await step('旧形式の記録の移行', async () => {

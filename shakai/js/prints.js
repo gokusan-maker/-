@@ -30,7 +30,7 @@
       if (document.getElementById('lp-style')) return;
       const s = document.createElement('style');
       s.id = 'lp-style';
-      s.textContent = L.CSS;
+      s.textContent = L.CSS + (window.SHAKAI_WORKS_CSS || '');
       document.head.appendChild(s);
     }
 

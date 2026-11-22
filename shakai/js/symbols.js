@@ -127,4 +127,5 @@
 
     App.registerMode({ id: 'symbols', icon: '📍', name: '地図記号', desc: '記号の形と名前・由来を覚える', start: menu });
   });
+  window.SHAKAI_SYMBOLS = SYMBOLS;
 })();

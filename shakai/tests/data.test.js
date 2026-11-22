@@ -10,7 +10,7 @@ const vm = require('vm');
 // ブラウザ用のスクリプトを window つきの環境で読みこむ
 const ctx = { window: {} };
 vm.createContext(ctx);
-for (const f of ['data.js', 'readings.js', 'map.js', 'symbols.js', 'climate.js', 'graphs.js', 'lesson.js', 'prints.js']) {
+for (const f of ['data.js', 'readings.js', 'map.js', 'symbols.js', 'climate.js', 'graphs.js', 'lesson.js', 'works.js', 'prints.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx, { filename: f });
 }
 const { FIELDS, UNITS, EVENTS, POOLS } = ctx.window.SHAKAI;
@@ -142,6 +142,22 @@ ctx.window.SHAKAI_PRINT_TESTS.forEach(t => {
   check(100 % t.n === 0, `${t.title}: 1問の点数が整数にならない`);
   check(!/undefined|NaN/.test(doc.html), `${t.title}: undefined などがまじっている`);
 });
+
+/* ---------- 資料ワーク ---------- */
+{
+  const W = ctx.window.SHAKAI_WORKS;
+  const SHW = { ...ctx.window.SHAKAI, MAP: ctx.window.SHAKAI_MAP, SYMBOLS: ctx.window.SHAKAI_SYMBOLS };
+  check(Array.isArray(SHW.SYMBOLS) && SHW.SYMBOLS.length >= 20, '地図記号のデータが読めない');
+  W.LIST.forEach(w => {
+    const doc = W.build(w.id, SHW);
+    check(doc.html.includes('lp-teacher'), `${w.title}: 解答ページがない`);
+    check(!/undefined|NaN/.test(doc.html), `${w.title}: undefined などがまじっている`);
+  });
+  check((W.build('cap', SHW).html.match(/class="wk-pref"/g) || []).length === 36, '白地図②の県が18×2（問題と解答）ではない');
+  // 白地図①の番号は都道府県コードの順で、47都道府県がそろっている
+  const keys = [...W.build('pref', SHW).html.matchAll(/<li><span class="lp-no">(\d+)<\/span>([^<]+)<\/li>/g)].map(m => m[2]);
+  check(keys.length === 47 && new Set(keys).size === 47 && keys[0] === '北海道' && keys[46] === '沖縄県', '白地図①の解答が都道府県コードの順の47都道府県になっていない');
+}
 
 /* ---------- 結果 ---------- */
 console.log(`${UNITS.length}単元・${all.length}問・できごと${EVENTS.length}件・都道府県${PREFS.length}`);

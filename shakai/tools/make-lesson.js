@@ -4,6 +4,7 @@
  *   node tools/make-lesson.js g1 h3      … 指定した単元だけ
  *   node tools/make-lesson.js --minutes 90
  *   node tools/make-lesson.js tests      … まとめテスト（地理・歴史・公民・総合）だけ
+ *   node tools/make-lesson.js works      … 資料ワーク（白地図・年表・地図記号）だけ
  * アプリと同じ js/lesson.js でHTMLを組み立て、Playwright（Chromium）で A4 の PDF にする。
  * ========================================================================= */
 'use strict';
@@ -21,7 +22,7 @@ catch (e) {
 const ROOT = path.join(__dirname, '..');
 const ctx = { window: {} };
 vm.createContext(ctx);
-for (const f of ['data.js', 'readings.js', 'lesson.js', 'prints.js']) {
+for (const f of ['data.js', 'readings.js', 'map.js', 'symbols.js', 'lesson.js', 'works.js', 'prints.js']) {
   vm.runInContext(fs.readFileSync(path.join(ROOT, 'js', f), 'utf8'), ctx, { filename: f });
 }
 const SH = ctx.window.SHAKAI, L = ctx.window.SHAKAI_LESSON, nameOf = ctx.window.SHAKAI_PRINT_NAME;
@@ -32,10 +33,11 @@ const minutes = mi >= 0 ? +args[mi + 1] : 45;
 const only = args.filter((a, k) => !a.startsWith('--') && (mi < 0 || k !== mi + 1));
 const TESTS = ctx.window.SHAKAI_PRINT_TESTS, testName = ctx.window.SHAKAI_TEST_PDF_NAME;
 const wantTests = !only.length || only.includes('tests');
+const wantWorks = !only.length || only.includes('works');
 const targets = SH.UNITS.map((u, k) => ({ u, no: k + 1 })).filter(x => !only.length || only.includes(x.u.id));
-if (!targets.length && !wantTests) { console.error('単元IDが見つかりません: ' + only.join(' ')); process.exit(1); }
+if (!targets.length && !wantTests && !wantWorks) { console.error('単元IDが見つかりません: ' + only.join(' ')); process.exit(1); }
 
-const FONT = '<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&display=swap" rel="stylesheet">';
+const FONT = '<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic:wght@400;700&family=BIZ+UDPMincho:wght@700&display=swap" rel="stylesheet">';
 
 (async () => {
   const browser = await chromium.launch();
@@ -60,6 +62,11 @@ const FONT = '<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic
       const doc = L.build(SH, { mode: 'test', title: t.title, items, testN: t.n, fieldId: t.fieldId, seed: 'test-' + t.id, readings: ctx.window.SHAKAI_READINGS });
       await render(doc, testName(t), `${t.title}：${doc.test}問`);
     }
+  }
+  if (wantWorks) {
+    const W = ctx.window.SHAKAI_WORKS;
+    const SHW = { ...SH, MAP: ctx.window.SHAKAI_MAP, SYMBOLS: ctx.window.SHAKAI_SYMBOLS };
+    for (const w of W.LIST) await render(W.build(w.id, SHW), W.pdfName(w), w.title);
   }
   await browser.close();
 })();

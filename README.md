@@ -90,8 +90,9 @@ cd shakai && python3 -m http.server 8000   # → http://localhost:8000
 - 「PDF」で作成ずみのファイル（`shakai/print/授業プリント/`）をダウンロード、「見る・印刷」で画面で確かめてから印刷・PDF保存
 - 授業時間 45分／90分 で表紙の時間配分が変わる。アプリでまちがえた問題だけのプリントも作れる
 - 確認テストは **A・B・C の3種類**（問題と並びが変わる）。くり返しの授業や再テストに
+- **資料ワーク**：白地図（都道府県名・県庁所在地・地方区分の色分け）、年表（時代別4枚・年を書く）、地図記号の書きこみワーク。作成ずみ PDF は `shakai/print/資料ワーク/`
 - **まとめテスト**：地理・歴史・公民（各25問・1問4点）と総合テスト（50問・1問2点）。作成ずみ PDF は `shakai/print/まとめテスト/`
-- 問題データを変えたら `npm run print` で全部の PDF を作り直せる（Playwright が必要。`node tools/make-lesson.js h3` で1単元だけ、`npm run print:tests` でまとめテストだけ）
+- 問題データを変えたら `npm run print` で全部の PDF を作り直せる（Playwright が必要。`node tools/make-lesson.js h3` で1単元だけ、`npm run print:tests` でまとめテストだけ、`npm run print:works` で資料ワークだけ）
 
 ## 記録・その他
 - 同じ問題に2回連続で正解すると「覚えた」。単元ごとの習得率をホームに表示
@@ -119,7 +120,7 @@ cd shakai && python3 -m http.server 8000   # → http://localhost:8000
 | `js/app.js` | アプリ本体（各モード・記録・設定・プリント・ユーザー・バッジ） |
 | `js/graphs.js` | グラフ読み取り（生産量の多い都道府県の割合） |
 | `js/monster.js` | 相棒モンスター（育成・ショップ・図鑑・声かけ） |
-| `js/lesson.js` / `js/prints.js` | 授業プリントの組み立て／授業用プリントのメニュー |
+| `js/lesson.js` / `js/works.js` / `js/prints.js` | 授業プリント・テストの組み立て／資料ワーク／授業用プリントのメニュー |
 | `tools/make-lesson.js` | 授業プリントの PDF を一括作成 |
 | `js/exam.js` | 実力テスト |
 | `js/persons.js` | 人物さかさクイズ |

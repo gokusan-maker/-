@@ -7,6 +7,7 @@
     "test:e2e": "node tests/e2e.test.js",
     "print": "node tools/make-lesson.js",
     "print:tests": "node tools/make-lesson.js tests",
+    "print:works": "node tools/make-lesson.js works",
     "start": "python3 -m http.server 8000"
   }
 }
