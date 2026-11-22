@@ -20,7 +20,15 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
   p.on('pageerror', e => errs.push(e.message));
   p.on('console', m => m.type() === 'error' && errs.push(m.text()));
   p.on('dialog', d => d.accept());
-  const step = async (name, fn) => { try { await fn(); } catch (e) { errs.push(`${name}: ${e.message.split('\n')[0]}`); } };
+  const step = async (name, fn) => {
+    try { await fn(); }
+    catch (e) {
+      // どの要素を待っていたかも残す
+      const lines = e.message.split('\n');
+      const loc = lines.find(l => /waiting for locator|locator resolved/.test(l));
+      errs.push(`${name}: ${lines[0]}${loc ? ' / ' + loc.trim() : ''}`);
+    }
+  };
   await p.goto(URL);
 
   await step('記述の判定', async () => {
@@ -238,7 +246,15 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     await p.click('[data-mode=quiz]'); await p.click('[data-n="10"]'); await p.click('#start');
     for (let i = 0; i < 10; i++) {
       await p.evaluate(() => { const ov = document.querySelector('.mon-overlay'); if (ov) ov.remove(); });
-      const k = await p.evaluate(() => { const q = document.querySelector('.qt').textContent; const it = window.SHAKAI.UNITS.flatMap(u => u.items).find(x => x.q === q); return [...document.querySelectorAll('.choice')].findIndex(b => b.textContent.includes(it.a)); });
+      // 同じ問題文の問題もあるので、選択肢の中に答えがあるものを選ぶ
+      const k = await p.evaluate(() => {
+        const q = document.querySelector('.qt').textContent;
+        const btns = [...document.querySelectorAll('.choice')];
+        const its = window.SHAKAI.UNITS.flatMap(u => u.items).filter(x => x.q === q);
+        for (const it of its) { const j = btns.findIndex(b => b.textContent.slice(1) === it.a); if (j >= 0) return j; }
+        return -1;
+      });
+      if (k < 0) throw new Error('正解の選択肢が見つからない');
       await p.click(`.choice[data-k="${k}"]`); await p.click('#next');
     }
     await p.waitForTimeout(700);
@@ -271,7 +287,15 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     const pages = await p.$$eval('.lp-page', x => x.length);
     if (pages < 5) throw new Error('プレビューのページ数 ' + pages);
     if (!(await p.textContent('.lp-cover')).includes('90分')) throw new Error('授業時間が反映されない');
-    await p.click('#back'); await p.click('#home');
+    await p.click('#back');
+    // まとめテストとテストの種類
+    await p.click('.pr-tabs [data-tab=test]'); await p.click('#ver [data-v=B]');
+    await p.click('.pr-test[data-t=all]');
+    const qs = await p.$$eval('.lp-q', x => x.length);
+    if (qs !== 50) throw new Error('総合テストの問題数 ' + qs);
+    if (!(await p.textContent('.lp-kind')).includes('（B）')) throw new Error('テストの種類が表示されない');
+    await p.click('#back'); await p.click('.pr-tabs [data-tab=lesson]'); await p.click('#ver [data-v=A]');
+    await p.click('#home');
   });
   await step('旧形式の記録の移行', async () => {
     await p.evaluate(() => localStorage['shakai-drill-v1'] = JSON.stringify({ v: 1, items: { 'g1-01': { c: 2, w: 1, s: 2 } }, days: {}, lastDay: null, streak: 0, sort: { played: 0, perfect: 0 }, pref: { units: ['g1'], count: 10 } }));

@@ -49,14 +49,20 @@
   /**
    * プリントのHTML（ページの束）を作る
    * @param SH     window.SHAKAI（UNITS・FIELDS・POOLS）
-   * @param opts   { unitId, title, items（省略時は単元の全問）, no（第何回）, minutes, date }
+   * @param opts   { unitId, title, items（省略時は単元の全問）, no（第何回）, minutes, date,
+   *                 version（'A'〜'C'：確認テストの種類）, mode（'lesson'｜'test'）, testN（テストの問題数）, fieldId }
    */
   function build(SH, opts) {
     const unit = SH.UNITS.find(u => u.id === opts.unitId) || null;
-    const field = unit ? SH.FIELDS.find(f => f.id === unit.field) : null;
+    const field = unit ? SH.FIELDS.find(f => f.id === unit.field) : (opts.fieldId ? SH.FIELDS.find(f => f.id === opts.fieldId) : null);
     const items = opts.items || (unit ? unit.items : []);
     const title = opts.title || (unit ? unit.name : '社会');
-    const seed = opts.seed || (unit ? unit.id : title);
+    // Aは以前と同じ並び。B・Cは別の問題・別の並びになる
+    const version = opts.version || 'A';
+    const seed = (opts.seed || (unit ? unit.id : title)) + (version === 'A' ? '' : '#' + version);
+    const testOnly = opts.mode === 'test';
+    const TN = opts.testN || TEST_N;
+    const vlabel = opts.version ? `（${version}）` : '';
     const choose = makeChooser(SH);
     const READ = opts.readings || {};
 
@@ -69,9 +75,9 @@
     // 確認テスト：練習問題とは別の並びで20問（記号10問＋記述10問をめざす）
     const pool = shuffle(items, seed + 't');
     const ch = pool.filter(needsChoice), wr = pool.filter(it => !needsChoice(it));
-    let test = [...ch.slice(0, 10), ...wr.slice(0, 10)];
-    if (test.length < TEST_N) test = test.concat(pool.filter(it => !test.includes(it)).slice(0, TEST_N - test.length));
-    test = shuffle(test.slice(0, TEST_N), seed + 'o').map(it => {
+    let test = [...ch.slice(0, Math.ceil(TN / 2)), ...wr.slice(0, Math.ceil(TN / 2))];
+    if (test.length < TN) test = test.concat(pool.filter(it => !test.includes(it)).slice(0, TN - test.length));
+    test = shuffle(test.slice(0, TN), seed + 'o').map(it => {
       // 確認テストでは、記述の問題の一部も記号にして形式を変える
       if (needsChoice(it) || /[0-9]/.test(it.a)) {
         const c = choose(it);
@@ -131,26 +137,28 @@
       </section>`).join('');
     const testPages = paginate(test, 12).map((qs, pi, arr) => `
       <section class="lp-page">
-        ${head(`確認テスト${arr.length > 1 ? `（${pi + 1}/${arr.length}）` : ''}`, '<span class="lp-score big"><i></i>／100点</span>')}
+        ${head(`${testOnly ? 'テスト' : '確認テスト'}${vlabel}${arr.length > 1 ? `（${pi + 1}/${arr.length}）` : ''}`, '<span class="lp-score big"><i></i>／100点</span>')}
         ${pi === 0 ? `<p class="lp-lead">教科書やノートを見ないで答えましょう。全${test.length}問・1問${pts}点。</p>` : ''}
         <ol class="lp-qs">${qs.map((q, k) => qItem(q, pi * 12 + k, true)).join('')}</ol>
       </section>`).join('');
 
     const keyList = qs => `<ol class="lp-keys">${qs.map((q, k) => `<li><span class="lp-no">${k + 1}</span><span>${q.kind === 'choice' ? `<b>${q.key}</b>　` : ''}${ans(q.it)}${q.it.e ? `<em>${esc(q.it.e)}</em>` : ''}</span></li>`).join('')}</ol>`;
-    const teacher = `
+    const cut = '<div class="lp-cut">✂ ここから先は先生用（切りはなして使えます）</div>';
+    const teacher = (testOnly ? '' : `
       <section class="lp-page lp-teacher">
-        <div class="lp-cut">✂ ここから先は先生用（切りはなして使えます）</div>
+        ${cut}
         ${head('解答（先生用）')}
         <h2 class="lp-h2">練習問題</h2>${keyList(practice)}
-      </section>
+      </section>`) + `
       <section class="lp-page lp-teacher">
+        ${testOnly ? cut : ''}
         ${head('解答（先生用）')}
-        <h2 class="lp-h2">確認テスト（1問${pts}点）</h2>${keyList(test)}
+        <h2 class="lp-h2">${testOnly ? 'テスト' : '確認テスト'}${vlabel}（1問${pts}点）</h2>${keyList(test)}
       </section>`;
 
     return {
-      title, practice: practice.length, test: test.length,
-      html: cover + practicePages + testPages + teacher
+      title, practice: testOnly ? 0 : practice.length, test: test.length,
+      html: testOnly ? testPages + teacher : cover + practicePages + testPages + teacher
     };
   }
 
@@ -159,7 +167,7 @@
   .lp-doc { font-family: 'BIZ UDPGothic', 'Zen Maru Gothic', 'Hiragino Sans', sans-serif; color: #111; }
   .lp-page { background: #fff; width: 210mm; min-height: 297mm; padding: 14mm 14mm 12mm; box-sizing: border-box; position: relative; break-after: page; font-size: 10.5pt; line-height: 1.55; }
   .lp-page:last-child { break-after: auto; }
-  .lp-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 8px; border-bottom: 2.5px solid #111; padding-bottom: 4px; margin-bottom: 8px; }
+  .lp-head { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: flex-end; gap: 4px 8px; border-bottom: 2.5px solid #111; padding-bottom: 4px; margin-bottom: 8px; }
   .lp-ttl { display: flex; align-items: center; gap: 8px; }
   .lp-ttl { min-width: 0; }
   .lp-ttl h1 { font-size: 15pt; margin: 0; white-space: nowrap; }
@@ -167,7 +175,7 @@
   .lp-kind { font-size: 10pt; border: 1.5px solid #111; border-radius: 4px; padding: 0 8px; font-weight: 700; }
   .lp-field { font-size: 9pt; color: #fff; border-radius: 99px; padding: 1px 10px; font-weight: 700; background: #666; }
   .lp-field.geo { background: #2f9e6e; } .lp-field.his { background: #d9622b; } .lp-field.civ { background: #3a6fd8; }
-  .lp-boxes { display: flex; gap: 10px; font-size: 10pt; white-space: nowrap; }
+  .lp-boxes { display: flex; gap: 10px; font-size: 10pt; white-space: nowrap; margin-left: auto; }
   .lp-name { display: inline-block; min-width: 42mm; border-bottom: 1px solid #111; }
   .lp-score { border: 1.5px solid #111; padding: 0 8px; }
   .lp-score i { display: inline-block; width: 12mm; }

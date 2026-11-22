@@ -10,7 +10,7 @@ const vm = require('vm');
 // ブラウザ用のスクリプトを window つきの環境で読みこむ
 const ctx = { window: {} };
 vm.createContext(ctx);
-for (const f of ['data.js', 'readings.js', 'map.js', 'symbols.js', 'climate.js', 'graphs.js', 'lesson.js']) {
+for (const f of ['data.js', 'readings.js', 'map.js', 'symbols.js', 'climate.js', 'graphs.js', 'lesson.js', 'prints.js']) {
   vm.runInContext(fs.readFileSync(path.join(__dirname, '..', 'js', f), 'utf8'), ctx, { filename: f });
 }
 const { FIELDS, UNITS, EVENTS, POOLS } = ctx.window.SHAKAI;
@@ -131,6 +131,16 @@ UNITS.forEach(u => {
   const keys = (doc.html.match(/<b>[アイウエ]<\/b>　/g) || []).length;
   check(choiceQs === keys, `${u.id}: 記号問題の数（${choiceQs}）と解答の記号の数（${keys}）が合わない`);
   check(!/undefined|NaN/.test(doc.html), `${u.id}: 授業プリントに undefined などがまじっている`);
+  // テストの種類B・Cは、Aとちがう問題・並びになる
+  const b = ctx.window.SHAKAI_LESSON.build(ctx.window.SHAKAI, { unitId: u.id, no: 1, version: 'B' });
+  check(b.html !== doc.html && b.test === 20, `${u.id}: テストの種類Bが作れない`);
+});
+ctx.window.SHAKAI_PRINT_TESTS.forEach(t => {
+  const items = t.fieldId ? UNITS.filter(u => u.field === t.fieldId).flatMap(u => u.items) : all;
+  const doc = ctx.window.SHAKAI_LESSON.build(ctx.window.SHAKAI, { mode: 'test', title: t.title, items, testN: t.n, fieldId: t.fieldId, seed: 'test-' + t.id });
+  check(doc.test === t.n, `${t.title}: 問題数が${t.n}問ではない（${doc.test}問）`);
+  check(100 % t.n === 0, `${t.title}: 1問の点数が整数にならない`);
+  check(!/undefined|NaN/.test(doc.html), `${t.title}: undefined などがまじっている`);
 });
 
 /* ---------- 結果 ---------- */
