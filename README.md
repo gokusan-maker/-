@@ -43,6 +43,8 @@ cd shakai && python3 -m http.server 8000   # → http://localhost:8000
 ## 画面イメージ
 ![問題を解く画面](shakai/docs/mockup-1.png)
 ![地図・資料で覚える画面](shakai/docs/mockup-2.png)
+![相棒モンスター「ハニー」](shakai/docs/mockup-3.png)
+![授業用プリント](shakai/docs/mockup-4.png)
 
 ## 問題を解く
 | モード | 内容 |
