@@ -116,7 +116,7 @@
         <h1 class="lp-cover-ttl">${esc(title)}</h1>
         <div class="lp-cover-name"><span>${opts.date ? esc(opts.date) : '　　年　　月　　日'}</span><span>名前<i></i></span></div>
         <div class="lp-block"><h2>今日のめあて</h2>
-          <p>「${esc(title)}」の大切な語句を、<b>漢字で正しく書ける</b>ようにしよう。まちがえた問題は、アプリの「苦手復習」で家でも復習しよう。</p></div>
+          <p>「${esc(title)}」の大切な語句を、<b>漢字で正しく書ける</b>ようにしよう。「要点まとめ」は赤シートで答えをかくして使えます。まちがえた問題は、アプリの「苦手復習」で家でも復習しよう。</p></div>
         <div class="lp-block"><h2>授業の流れ（${minutes}分）</h2>
           <table class="lp-plan">${plan.map(([t, m], k) => `<tr><td>${k + 1}</td><td>${t}</td><td>${m}分</td><td class="chk">□</td></tr>`).join('')}</table></div>
         <div class="lp-block"><h2>得点</h2>
@@ -156,6 +156,20 @@
         ${pi === 0 ? '<p class="lp-lead">答えを右のらんに書きましょう。<b>ア〜エ</b>がある問題は記号で答えます。語句は<b>漢字で</b>書きましょう。</p>' : ''}
         <ol class="lp-qs">${qs.map((q, k) => qItem(q, startNo(pPages, pi) + k, false)).join('')}</ol>
       </section>`).join('');
+    // 要点まとめ：単元の全問を答えつきで一覧にする。答えは赤シートでかくれる色（朱色）で印刷する
+    const sumRows = items.map(it => ({ it, h: Math.max(lines(it.q, 38) * 5.0, lines(it.a, 11) * 5.6) + 2.8 }));
+    const sPages = [[]];
+    let sUsed = 14;
+    sumRows.forEach(r => {
+      if (sUsed + r.h > 238 && sPages[sPages.length - 1].length) { sPages.push([]); sUsed = 0; }
+      sPages[sPages.length - 1].push(r); sUsed += r.h;
+    });
+    const summaryPages = (testOnly || opts.summary === false || !items.length) ? '' : sPages.map((rows, pi, arr) => `
+      <section class="lp-page">
+        ${head(`要点まとめ${arr.length > 1 ? `（${pi + 1}/${arr.length}）` : ''}`)}
+        ${pi === 0 ? '<p class="lp-lead">赤い字の答えは、<b>赤シート</b>をのせるとかくれます。答えをかくして言えるか確かめましょう。</p>' : ''}
+        <table class="lp-sum">${rows.map((r, k) => `<tr><td class="no">${startNo(sPages, pi) + k + 1}</td><td class="q">${esc(r.it.q)}</td><td class="a">${esc(r.it.a)}</td></tr>`).join('')}</table>
+      </section>`).join('');
     const tPages = paginate(test, true);
     const testPages = tPages.map((qs, pi, arr) => `
       <section class="lp-page">
@@ -181,7 +195,8 @@
 
     return {
       title, practice: testOnly ? 0 : practice.length, test: test.length,
-      html: testOnly ? testPages + teacher : cover + practicePages + testPages + teacher
+      summary: testOnly ? 0 : (summaryPages ? items.length : 0),
+      html: testOnly ? testPages + teacher : cover + summaryPages + practicePages + testPages + teacher
     };
   }
 
@@ -229,6 +244,10 @@
   .lp-refl p { margin: 1mm 0; }
   .lp-lines i { display: block; height: 8mm; border-bottom: 1px solid #888; }
   .lp-teacher { background: #fffdf5; }
+  .lp-sum { width: 100%; border-collapse: collapse; font-size: 9.5pt; }
+  .lp-sum td { border-bottom: 1px dotted #aaa; padding: 1.1mm 1.5mm; vertical-align: middle; line-height: 1.45; }
+  .lp-sum .no { width: 7mm; color: #666; font-weight: 700; text-align: right; }
+  .lp-sum .a { width: 44mm; color: #e8380d; font-weight: 700; font-size: 11pt; }
   .lp-cut { text-align: center; font-size: 9pt; color: #555; border-top: 1.5px dashed #555; padding-top: 1mm; margin: -6mm 0 4mm; }
   .lp-h2 { font-size: 12pt; margin: 2mm 0; border-left: 5px solid #111; padding-left: 6px; }
   .lp-keys { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: 8mm; font-size: 9.5pt; }

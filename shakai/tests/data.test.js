@@ -126,6 +126,7 @@ UNITS.forEach(u => {
   check(doc.html === again.html, `${u.id}: 授業プリントが作るたびに変わる`);
   check(doc.test === 20, `${u.id}: 確認テストが20問ではない（${doc.test}問）`);
   check(doc.practice === Math.min(40, u.items.length), `${u.id}: 練習問題の数がおかしい（${doc.practice}問）`);
+  check(doc.summary === u.items.length && (doc.html.match(/<td class="a">/g) || []).length === u.items.length, `${u.id}: 要点まとめに単元の全問がのっていない`);
   // 解答の記号（ア〜エ）が、選択肢の正解と合っているか
   const choiceQs = (doc.html.match(/<div class="lp-ch">/g) || []).length;
   const keys = (doc.html.match(/<b>[アイウエ]<\/b>　/g) || []).length;
