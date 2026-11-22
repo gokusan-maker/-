@@ -326,7 +326,16 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     await p.click('#back');
     await p.click('.pr-tabs [data-tab=work]'); await p.click('.pr-work[data-w=pref]');
     if (await p.$$eval('.wk-map rect', x => x.length) < 47) throw new Error('白地図ワークの地図がない');
-    await p.click('#back'); await p.click('.pr-tabs [data-tab=test]');
+    await p.click('#back');
+    // 授業で映す：4択で3問進めて、記録に残らないこと
+    const before = await p.evaluate(() => Object.keys(JSON.parse(localStorage['shakai-drill-v1']).items).length);
+    await p.click('.pr-tabs [data-tab=class]'); await p.click('#cl-kind [data-v=choice]'); await p.click('.cl-unit[data-u=h3]');
+    if (await p.$$eval('.cl-c', x => x.length) !== 4) throw new Error('授業で映す：選択肢が4つない');
+    for (let i = 0; i < 3; i++) { await p.click('#cl-next'); if (!(await p.$('.cl-c.ok'))) throw new Error('正解が表示されない'); await p.click('#cl-next'); }
+    const after = await p.evaluate(() => Object.keys(JSON.parse(localStorage['shakai-drill-v1']).items).length);
+    if (after !== before) throw new Error('授業で映すで学習記録がふえた');
+    await p.click('#cl-close'); await p.click('#cl-kind [data-v=flash]');
+    await p.click('.pr-tabs [data-tab=test]');
     await p.click('.pr-tabs [data-tab=lesson]'); await p.click('#ver [data-v=A]');
     await p.click('#home');
   });

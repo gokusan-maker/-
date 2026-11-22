@@ -621,3 +621,31 @@ mark { background: #ffe58a; color: #222; border-radius: 3px; padding: 0 1px; }
 .ex-map .jmap .tile { cursor: default; }
 .ex-chart { margin-top: 8px; }
 .mon-wk { color: #d9622b; }
+
+/* ===================== 授業で映す ===================== */
+.pr-tabs { flex-wrap: wrap; }
+body.cl-on .topbar { display: none; }
+body.cl-on #app { max-width: none; }
+body.cl-on #view { padding: 0; }
+.cl-screen { min-height: 100vh; display: flex; flex-direction: column; gap: 2.2vh; padding: 2.5vh 4vw; box-sizing: border-box; background: var(--bg); }
+.cl-top { display: flex; align-items: center; gap: 12px; font-size: clamp(14px, 1.8vw, 22px); font-weight: 700; }
+.cl-top .tag { font-size: inherit; padding: 2px 14px; }
+.cl-unit-name { color: var(--muted); }
+.cl-count { margin-left: auto; color: var(--muted); }
+.cl-btn { width: 44px; height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--paper); font-size: 20px; padding: 0; }
+.cl-q { font-size: clamp(24px, 4.6vw, 60px); font-weight: 900; line-height: 1.45; }
+.cl-ch { display: grid; grid-template-columns: 1fr 1fr; gap: 1.6vh 2vw; }
+.cl-c { background: var(--paper); border: 3px solid var(--line); border-radius: 18px; padding: 1.6vh 1.6vw; font-size: clamp(20px, 3.2vw, 42px); font-weight: 700; display: flex; gap: 14px; align-items: center; }
+.cl-c b { color: var(--muted); }
+.cl-c.ok { border-color: var(--ok); background: var(--ok-bg); }
+.cl-c.dim { opacity: .35; }
+.cl-a { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; min-height: 12vh;
+  border: 3px dashed var(--line); border-radius: 22px; cursor: pointer; padding: 2vh 2vw; }
+.cl-a.on { border-style: solid; border-color: var(--accent); background: var(--paper); cursor: default; }
+.cl-tap { font-size: clamp(18px, 2.4vw, 30px); color: var(--muted); font-weight: 700; }
+.cl-ans { font-size: clamp(30px, 6.5vw, 88px); font-weight: 900; color: var(--accent); line-height: 1.25; }
+.cl-ans small { display: block; font-size: .42em; color: var(--muted); font-weight: 700; }
+.cl-exp { margin-top: 1.4vh; font-size: clamp(16px, 2.2vw, 28px); color: var(--muted); max-width: 70ch; }
+.cl-nav { display: flex; gap: 2vw; }
+.cl-nav .btn { flex: 1; min-height: clamp(52px, 8vh, 84px); font-size: clamp(18px, 2.4vw, 30px); }
+@media print { body.cl-on .cl-nav, body.cl-on .cl-btn { display: none; } }

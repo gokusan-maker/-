@@ -38,19 +38,19 @@
 
     function menu() {
       App.onKey(null); App.stopTimer();
-      document.body.classList.remove('printing-lesson');
+      document.body.classList.remove('printing-lesson', 'cl-on');
       const s = st();
       const minutes = s.minutes || 45;
       const version = s.version || 'A';
       const tab = s.tab || 'lesson';
       const weak = App.ALL.filter(it => App.isWeak(it.id));
       const ver = version === 'A' ? undefined : version;   // Aは作成ずみPDFと同じ内容
-      const tabs = [['lesson', '📘 単元ごと'], ['test', '📝 まとめテスト'], ...(window.SHAKAI_WORKS ? [['work', '🗾 資料ワーク']] : [])];
+      const tabs = [['lesson', '📘 単元ごと'], ['test', '📝 まとめテスト'], ...(window.SHAKAI_WORKS ? [['work', '🗾 資料ワーク']] : []), ...(window.SHAKAI_CLASS ? [['class', '📺 授業で映す']] : [])];
       view.innerHTML = `
         <h2 style="margin-top:4px">🖨 授業用プリント</h2>
         <p class="muted">アプリで練習する問題を、授業でそのまま配れる A4 のプリントにしました。どのプリントにも、後ろに<b>先生用の解答</b>がついています。</p>
         <div class="seg pr-tabs">${tabs.map(([k, t]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${t}</button>`).join('')}</div>
-        ${tab === 'work' && window.SHAKAI_WORKS ? window.SHAKAI_WORKS.menuHtml(App) : `
+        ${tab === 'class' && window.SHAKAI_CLASS ? window.SHAKAI_CLASS.menuHtml(App) : tab === 'work' && window.SHAKAI_WORKS ? window.SHAKAI_WORKS.menuHtml(App) : `
         <div class="card setting col">
           <span><b>テストの種類</b><br><span class="muted">A・B・Cで問題と並びが変わります。くり返しの授業や再テストに。作成ずみPDFはAです。</span></span>
           <div class="seg" id="ver">${['A', 'B', 'C'].map(v => `<button data-v="${v}" class="${version === v ? 'on' : ''}">${v}</button>`).join('')}</div>
@@ -96,6 +96,7 @@
       const w = $('#pr-weak');
       if (w) w.onclick = () => preview({ title: '苦手な問題', items: weak, seed: 'weak-' + App.today(), minutes });
       if (tab === 'work' && window.SHAKAI_WORKS) window.SHAKAI_WORKS.bind(App, preview);
+      if (tab === 'class' && window.SHAKAI_CLASS) window.SHAKAI_CLASS.bind(App, menu);
       $('#home').onclick = App.goHome;
       window.scrollTo(0, 0);
     }

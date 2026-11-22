@@ -1,9 +1,9 @@
 /* オフラインでも使えるように、アプリの画面を構成するファイルをキャッシュする */
-const CACHE = 'shakai-drill-v21';
+const CACHE = 'shakai-drill-v22';
 const FILES = [
   './', './index.html', './manifest.webmanifest',
   './css/style.css',
-  './js/data.js', './js/readings.js', './js/map.js', './js/symbols.js', './js/climate.js', './js/lesson.js', './js/works.js', './js/prints.js', './js/monster.js', './js/graphs.js', './js/exam.js', './js/persons.js', './js/notes.js', './js/timeline.js', './js/search.js', './js/app.js',
+  './js/data.js', './js/readings.js', './js/map.js', './js/symbols.js', './js/climate.js', './js/lesson.js', './js/works.js', './js/classroom.js', './js/prints.js', './js/monster.js', './js/graphs.js', './js/exam.js', './js/persons.js', './js/notes.js', './js/timeline.js', './js/search.js', './js/app.js',
   './icons/icon.svg', './icons/icon-192.png', './icons/icon-512.png'
 ];
 
