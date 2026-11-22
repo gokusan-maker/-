@@ -657,3 +657,8 @@ body.cl-on #view { padding: 0; }
 .cl-sym { height: clamp(110px, 30vh, 260px); width: auto; color: var(--ink); }
 .cl-chart { height: 40vh; }
 .cl-chart .ondo { height: 100%; width: auto; }
+
+/* 使い方 */
+.help-sec { padding: 12px 16px; margin-bottom: 10px; font-size: 14px; }
+.help-sec h3 { margin: 0 0 4px; font-size: 16px; display: flex; gap: 8px; align-items: center; }
+.help-sec p { margin: 4px 0; line-height: 1.7; }

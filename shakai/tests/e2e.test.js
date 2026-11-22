@@ -170,6 +170,11 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     await p.click('#only'); await p.click('#hide'); await p.click('#quiz');
     await p.click('.choice[data-k="0"]'); await p.click('.quit'); await p.click('#home');
   });
+  await step('使い方', async () => {
+    await p.click('[data-mode="x:help"]');
+    if (await p.$$eval('.help-sec', x => x.length) < 5) throw new Error('使い方の項目が足りない');
+    await p.click('#home');
+  });
   await step('用語さくいん', async () => {
     await p.click('[data-mode="x:search"]'); await p.fill('#sq', 'りあす');
     await p.waitForTimeout(300);

@@ -169,6 +169,16 @@ ctx.window.SHAKAI_PRINT_TESTS.forEach(t => {
   check((css.match(/\{/g) || []).length === (css.match(/\}/g) || []).length, 'style.css の { と } の数が合わない');
 }
 
+/* ---------- オフライン用のキャッシュ ---------- */
+// index.html が読みこむファイルが、sw.js のキャッシュの一覧にすべて入っているか
+{
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const sw = fs.readFileSync(path.join(__dirname, '..', 'sw.js'), 'utf8');
+  const refs = [...html.matchAll(/(?:src|href)="((?:js|css|icons)\/[^"]+)"/g)].map(m => m[1]);
+  check(refs.length >= 10, 'index.html から読みこむファイルが見つからない');
+  refs.forEach(r => check(sw.includes(`'./${r}'`), `sw.js のキャッシュに ${r} がない（オフラインで動かなくなる）`));
+}
+
 /* ---------- 結果 ---------- */
 console.log(`${UNITS.length}単元・${all.length}問・できごと${EVENTS.length}件・都道府県${PREFS.length}`);
 if (failures) {
