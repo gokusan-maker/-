@@ -80,6 +80,41 @@
   ];
   const SLOT_NAME = { head: 'あたま', face: 'かお', neck: 'くび' };
 
+  /* ===================== 今日のミッション ===================== */
+  // 毎日、日付で決まる3つが出る。1つで 🪙15、3つ全部で 🪙20 と XP30 のボーナス
+  const MISSIONS = [
+    { id: 'c10', text: '10問正解しよう', goal: 10, key: 'correct' },
+    { id: 'c25', text: '25問正解しよう', goal: 25, key: 'correct' },
+    { id: 'a20', text: '20問とこう', goal: 20, key: 'answered' },
+    { id: 's5', text: '5問連続で正解しよう', goal: 5, key: 'bestStreak' },
+    { id: 's8', text: '8問連続で正解しよう', goal: 8, key: 'bestStreak' },
+    { id: 'm5', text: '地図・グラフ・年号などの問題を5問とこう', goal: 5, key: 'material' },
+    { id: 'g10', text: '地理の問題に10問正解しよう', goal: 10, key: 'geo' },
+    { id: 'h10', text: '歴史の問題に10問正解しよう', goal: 10, key: 'his' },
+    { id: 'v10', text: '公民の問題に10問正解しよう', goal: 10, key: 'civ' }
+  ];
+  const COIN_MISSION = 15, COIN_ALL = 20, XP_ALL = 30;
+
+  /* ===================== おみやげ ===================== */
+  // 1日の目標を達成すると、ハニーがどこかの県へおでかけして名産を持って帰る
+  const SOUVENIRS = [
+    { pref: '北海道', item: 'じゃがいも', icon: '🥔' }, { pref: '青森県', item: 'りんご', icon: '🍎' },
+    { pref: '岩手県', item: '南部鉄器', icon: '🫖' }, { pref: '宮城県', item: '笹かまぼこ', icon: '🍥' },
+    { pref: '秋田県', item: 'きりたんぽ', icon: '🍢' }, { pref: '山形県', item: 'さくらんぼ', icon: '🍒' },
+    { pref: '栃木県', item: 'いちご', icon: '🍓' }, { pref: '千葉県', item: '落花生', icon: '🥜' },
+    { pref: '新潟県', item: 'お米', icon: '🍚' }, { pref: '石川県', item: '輪島塗のおわん', icon: '🥣' },
+    { pref: '山梨県', item: 'ぶどう', icon: '🍇' }, { pref: '長野県', item: 'レタス', icon: '🥬' },
+    { pref: '静岡県', item: 'うなぎ（浜名湖）', icon: '🐟' }, { pref: '愛知県', item: '瀬戸焼のおさら', icon: '🍽' },
+    { pref: '京都府', item: '西陣織のハンカチ', icon: '🧣' }, { pref: '和歌山県', item: '梅干し', icon: '🟣' },
+    { pref: '広島県', item: 'かき', icon: '🦪' }, { pref: '香川県', item: 'さぬきうどん', icon: '🍜' },
+    { pref: '愛媛県', item: 'みかん', icon: '🍊' }, { pref: '福岡県', item: '博多人形', icon: '🎎' },
+    { pref: '佐賀県', item: '有田焼のちゃわん', icon: '🍵' }, { pref: '大分県', item: 'かぼす', icon: '🟢' },
+    { pref: '鹿児島県', item: 'さつまいも', icon: '🍠' }, { pref: '沖縄県', item: 'パイナップル', icon: '🍍' }
+  ];
+  const COIN_TRIP = 10;
+  // 日付から決まる数（同じ日なら同じミッション）
+  const daySeed = (d, salt) => { let h = 7; for (const c of d + salt) h = (h * 31 + c.charCodeAt(0)) >>> 0; return h; };
+
   /* ===================== 絵（SVG） ===================== */
   let uid = 0;
   const CLAY = '#d39466', CLAY_D = '#a5683f', CLAY_L = '#f0c299';
@@ -221,7 +256,39 @@
       m.wear = m.wear || {};
       m.owned = m.owned || ['field'];
       m.seen = m.seen || ['egg'];
+      m.souvenirs = m.souvenirs || [];
       return m;
+    }
+    // 今日のミッション（日付がかわったら作り直す）
+    function mission() {
+      const m = M(), d = App.today();
+      if (!m.mission || m.mission.date !== d) {
+        const ids = [], pool = MISSIONS.map(x => x.id);
+        let h = daySeed(d, 'mission');
+        while (ids.length < 3) { const k = h % pool.length; if (!ids.includes(pool[k])) ids.push(pool[k]); h = (h * 1103515245 + 12345) >>> 0; }
+        m.mission = { date: d, ids, prog: {}, done: [], all: false };
+      }
+      return m.mission;
+    }
+    // ミッションの進みぐあいを加え、達成したらコインをわたす
+    function progress(key, value, setMax) {
+      const ms = mission(), m = M();
+      ms.ids.forEach(id => {
+        const def = MISSIONS.find(x => x.id === id);
+        if (def.key !== key || ms.done.includes(id)) return;
+        ms.prog[id] = setMax ? Math.max(ms.prog[id] || 0, value) : (ms.prog[id] || 0) + value;
+        if (ms.prog[id] >= def.goal) {
+          ms.done.push(id);
+          m.coins += COIN_MISSION;
+          setTimeout(() => bubble(`ミッション達成！「${def.text}」🪙+${COIN_MISSION}`), 1200);
+        }
+      });
+      if (!ms.all && ms.done.length === ms.ids.length) {
+        ms.all = true;
+        m.coins += COIN_ALL;
+        setTimeout(() => { bubble(`今日のミッションぜんぶクリア！ 🪙+${COIN_ALL}`); gain(XP_ALL, null, 0); }, 3200);
+      }
+      App.save();
     }
     const night = () => { const h = new Date().getHours(); return h >= 22 || h < 6; };
     const lovedDays = () => Object.keys(App.state.days || {}).length;
@@ -297,10 +364,14 @@
     // 問題をといたときの声かけ用に、連続正解・連続ミスを数える
     let streak = 0, miss = 0;
     App.on('study', ({ n, ok, field }) => {
-      if (ok === null) { gain(XP_OTHER * n, null, n); return; }
+      progress('answered', n);
+      if (ok === null) { gain(XP_OTHER * n, null, n); progress('material', n); return; }
       gain(ok ? XP_CORRECT : XP_WRONG, field, ok ? COIN_CORRECT : 0);
       if (ok) {
         streak++; miss = 0;
+        progress('correct', 1);
+        if (field) progress(field, 1);
+        progress('bestStreak', streak, true);
         if (streak === 3) bubble(pick(VOICE.streak3));
         else if (streak === 5) bubble(pick(VOICE.streak5));
         else if (streak === 10) bubble(pick(VOICE.streak10));
@@ -309,7 +380,18 @@
         if (miss === 3) { bubble(pick(VOICE.wrong3)); miss = 0; }
       }
     });
-    App.on('goal', () => { gain(0, null, COIN_GOAL); setTimeout(() => bubble(`目標たっせい！ コイン+${COIN_GOAL}`), 2400); });
+    App.on('goal', () => {
+      gain(0, null, COIN_GOAL);
+      setTimeout(() => bubble(`目標たっせい！ コイン+${COIN_GOAL}`), 2400);
+      // ハニーがおでかけ（1日1回）。帰ってくるとおみやげをくれる
+      const m = M(), d = App.today();
+      if (!m.trip && m.lastTrip !== d && levelInfo(m.xp).level >= 2) {
+        const sv = SOUVENIRS[daySeed(d, 'trip') % SOUVENIRS.length];
+        m.trip = { date: d, pref: sv.pref }; m.lastTrip = d;
+        App.save();
+        setTimeout(() => bubble(`${m.name}がおでかけしたよ。ホームのカードを見てね`), 4800);
+      }
+    });
     App.on('badge', () => gain(0, null, COIN_BADGE));
 
     /* ===================== ホームのカード ===================== */
@@ -321,7 +403,8 @@
           <span class="mon-card-info">
             <span class="mon-card-name"><b>${esc(m.name)}</b> <span class="muted">${esc(formName(st, m.branch))}</span></span>
             <span class="mon-card-lv">Lv${li.level}<span class="bar"><i style="width:${li.into / li.need * 100}%"></i></span></span>
-            <span class="mon-card-say">${esc(night() ? pick(VOICE.night) : pick(VOICE.hello))}</span>
+            <span class="mon-card-say">${m.trip ? '🎁 おみやげがあるよ！' : esc(night() ? pick(VOICE.night) : pick(VOICE.hello))}</span>
+            <span class="mon-card-ms">📋 今日のミッション ${mission().done.length}/3</span>
           </span>
           <span class="mon-coin">🪙 ${m.coins}</span>
         </button>`;
@@ -335,7 +418,19 @@
       App.onKey(null); App.stopTimer();
       const m = M(), li = levelInfo(m.xp), st = stageOf(li.level);
       const next = STAGES.find(s => s.min > li.level);
+      // おでかけから帰ってきたら、おみやげを受け取る
+      let gift = null;
+      if (m.trip) {
+        gift = SOUVENIRS.find(x => x.pref === m.trip.pref) || SOUVENIRS[0];
+        if (!m.souvenirs.includes(gift.pref)) m.souvenirs.push(gift.pref);
+        m.coins += COIN_TRIP;
+        delete m.trip;
+        App.save();
+      }
+      const ms = mission();
       view.innerHTML = `
+        ${gift ? `<div class="card mon-gift"><span class="mg-ico">${gift.icon}</span><span><b>${esc(m.name)}がおでかけから帰ってきた！</b><br>
+          ${esc(gift.pref)}で「${esc(gift.item)}」をもらってきたよ。🪙+${COIN_TRIP}<br><span class="muted">${esc(gift.pref)}の名産です。おみやげ帳にのりました。</span></span></div>` : ''}
         <div class="card mon-room">
           <svg viewBox="0 0 300 220" class="mon-scene" id="mon-scene">
             ${roomBg(m.room)}
@@ -349,7 +444,14 @@
           <div class="mon-lv">Lv${li.level}<span class="bar"><i style="width:${li.into / li.need * 100}%"></i></span><small>${li.into}/${li.need}</small></div>
           <div class="muted">${next ? `Lv${next.min}で${next.id === 'adult' ? '進化（いちばん勉強した分野で姿がかわる）' : `「${next.name}」に進化`}` : 'さいごの姿まで育ったよ！'}</div>
           <div class="mon-src">${['geo', 'his', 'civ'].map(k => `<span><span class="dot ${k}"></span>${BRANCHES[k].field} ${m.src[k] || 0}XP</span>`).join('')}</div>
-          <p class="muted" style="margin:6px 0 0">正解で XP+${XP_CORRECT}・🪙+${COIN_CORRECT}、1日の目標で 🪙+${COIN_GOAL}、バッジで 🪙+${COIN_BADGE}</p>
+          <p class="muted" style="margin:6px 0 0">正解で XP+${XP_CORRECT}・🪙+${COIN_CORRECT}、1日の目標で 🪙+${COIN_GOAL}（ハニーがおでかけ）、バッジで 🪙+${COIN_BADGE}</p>
+        </div>
+        <div class="card mon-missions">
+          <b>📋 今日のミッション</b>${ms.all ? '<span class="tag geo">ぜんぶクリア！</span>' : `<span class="muted">1つ🪙${COIN_MISSION}・ぜんぶで🪙${COIN_ALL}とXP${XP_ALL}</span>`}
+          ${ms.ids.map(id => {
+            const def = MISSIONS.find(x => x.id === id), v = Math.min(def.goal, ms.prog[id] || 0), done = ms.done.includes(id);
+            return `<div class="mm ${done ? 'done' : ''}"><span>${done ? '✅' : '⬜'} ${esc(def.text)}</span><span class="bar"><i style="width:${v / def.goal * 100}%"></i></span><small>${v}/${def.goal}</small></div>`;
+          }).join('')}
         </div>
         <div class="seg mon-tabs">
           ${[['food', '🍙 おやつ'], ['wear', '🎀 きせかえ'], ['room', '🏠 へや'], ['book', '📖 ずかん']].map(([k, t]) => `<button data-tab="${k}" class="${tab === k ? 'on' : ''}">${t}</button>`).join('')}
@@ -391,7 +493,11 @@
             <svg viewBox="0 0 300 220" class="mi-room">${roomBg(r.id)}</svg><b>${r.name}</b><span class="mi-price">${on ? 'いまのへや' : own ? 'かえる' : `🪙 ${r.price}`}</span></button>`;
         }).join('')}</div>`;
       }
-      return `<p class="muted">出会った姿 ${m.seen.length}/${FORMS.length}。Lv15の進化は、それまでにいちばんXPをためた分野で決まります。</p>
+      return `<h2>おみやげ帳（${m.souvenirs.length}/${SOUVENIRS.length}）</h2>
+        <p class="muted">1日の目標を達成すると、ハニーがどこかの都道府県へおでかけして、名産をおみやげに持って帰ってきます。</p>
+        <div class="mon-souv">${SOUVENIRS.map(x => { const got = m.souvenirs.includes(x.pref); return `<div class="card ms-item ${got ? '' : 'unseen'}"><span class="mi-ico">${got ? x.icon : '❔'}</span><b>${got ? esc(x.item) : '？？？'}</b><span class="muted">${esc(x.pref)}</span></div>`; }).join('')}</div>
+        <h2>ずかん</h2>
+        <p class="muted">出会った姿 ${m.seen.length}/${FORMS.length}。Lv15の進化は、それまでにいちばんXPをためた分野で決まります。</p>
         <div class="mon-book">${FORMS.map(f => {
           const seen = m.seen.includes(f.key);
           const [sid, br] = f.key.split('-');
@@ -439,5 +545,5 @@
     App.openMonster = open;
   });
 
-  window.SHAKAI_MONSTER = { levelInfo, stageOf, xpToNext, STAGES, FORMS, FOODS, WEARS, ROOMS };
+  window.SHAKAI_MONSTER = { levelInfo, stageOf, xpToNext, STAGES, FORMS, FOODS, WEARS, ROOMS, MISSIONS, SOUVENIRS };
 })();

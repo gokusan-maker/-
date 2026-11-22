@@ -271,7 +271,17 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     await p.click('[data-tab=room]'); await p.click('[data-room=kofun]');
     await p.click('[data-tab=book]');
     const m2 = await p.evaluate(() => JSON.parse(localStorage['shakai-drill-v1']).ext.monster);
-    if (m2.wear.neck !== 'bell' || m2.room !== 'kofun' || m2.coins !== 500 - 20 - 50 - 100) throw new Error('ショップ ' + JSON.stringify(m2));
+    if (m2.wear.neck !== 'bell' || m2.room !== 'kofun' || m2.coins < 500 - 20 - 50 - 100 || m2.coins > 500 - 20 - 50 - 100 + 60) throw new Error('ショップ ' + JSON.stringify(m2));
+    // 今日のミッションとおみやげ
+    const ms = await p.evaluate(() => JSON.parse(localStorage['shakai-drill-v1']).ext.monster.mission);
+    if (!ms || ms.ids.length !== 3 || ms.prog === undefined) throw new Error('今日のミッションがない ' + JSON.stringify(ms));
+    await p.evaluate(() => { const S = JSON.parse(localStorage['shakai-drill-v1']); S.ext.monster.trip = { date: '2026-01-01', pref: '青森県' }; localStorage['shakai-drill-v1'] = JSON.stringify(S); });
+    await p.goto(URL);
+    if (!(await p.textContent('#mon-card')).includes('おみやげ')) throw new Error('おみやげの知らせがない');
+    await p.click('#mon-card');
+    if (!(await p.textContent('.mon-gift')).includes('りんご')) throw new Error('おみやげを受け取れない');
+    await p.click('[data-tab=book]');
+    if (!(await p.textContent('.mon-souv')).includes('りんご')) throw new Error('おみやげ帳にのらない');
     // 呼吸のアニメーションで動き続けているので、タップは直接送る
     await p.$eval('.mon-tap', g => g.dispatchEvent(new MouseEvent('click', { bubbles: true })));
     await p.click('#home');

@@ -159,6 +159,15 @@ ctx.window.SHAKAI_PRINT_TESTS.forEach(t => {
   check(keys.length === 47 && new Set(keys).size === 47 && keys[0] === '北海道' && keys[46] === '沖縄県', '白地図①の解答が都道府県コードの順の47都道府県になっていない');
 }
 
+/* ---------- スタイルシート ---------- */
+// 画面の大事な部品のスタイルが消えていないか（ファイルをうっかり上書きしたときに気づけるように）
+{
+  const css = fs.readFileSync(path.join(__dirname, '..', 'css', 'style.css'), 'utf8');
+  ['.choice', '.jmap', '.redsheet', '.rs-a', '.mon-card', '.mon-missions', '.pr-row', '.lp-doc', '@media print']
+    .forEach(sel => check(css.includes(sel), `style.css に ${sel} のスタイルがない`));
+  check((css.match(/\{/g) || []).length === (css.match(/\}/g) || []).length, 'style.css の { と } の数が合わない');
+}
+
 /* ---------- 結果 ---------- */
 console.log(`${UNITS.length}単元・${all.length}問・できごと${EVENTS.length}件・都道府県${PREFS.length}`);
 if (failures) {

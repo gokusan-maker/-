@@ -597,3 +597,21 @@ mark { background: #ffe58a; color: #222; border-radius: 3px; padding: 0 1px; }
   body.printing-lesson .lp-page { box-shadow: none; margin: 0; }
   body.printing-lesson { background: #fff; }
 }
+
+/* ===================== ミッション・おみやげ ===================== */
+.mon-card-ms { font-size: 11px; color: var(--muted); font-weight: 700; }
+.mon-missions { padding: 12px 16px; margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+.mon-missions > b { font-size: 15px; }
+.mon-missions .tag, .mon-missions > .muted { font-size: 11px; }
+.mm { display: grid; grid-template-columns: 1fr 70px 38px; gap: 8px; align-items: center; font-size: 13px; }
+.mm .bar { margin: 0; height: 7px; }
+.mm .bar > i { background: var(--geo); }
+.mm small { color: var(--muted); text-align: right; }
+.mm.done span:first-child { color: var(--muted); text-decoration: line-through; }
+.mon-gift { display: flex; gap: 12px; align-items: center; padding: 12px 16px; margin-bottom: 12px; border: 2px solid #f0a04b; font-size: 14px; }
+.mg-ico { font-size: 40px; }
+.mon-souv { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin-bottom: 6px; }
+.ms-item { display: flex; flex-direction: column; align-items: center; padding: 8px 4px; text-align: center; }
+.ms-item b { font-size: 12px; }
+.ms-item .muted { font-size: 11px; }
+.ms-item.unseen { opacity: .5; }
