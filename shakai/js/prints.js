@@ -45,7 +45,7 @@
       const tab = s.tab || 'lesson';
       const weak = App.ALL.filter(it => App.isWeak(it.id));
       const ver = version === 'A' ? undefined : version;   // Aは作成ずみPDFと同じ内容
-      const tabs = [['lesson', '📘 単元の授業プリント'], ['test', '📝 まとめテスト'], ...(window.SHAKAI_WORKS ? [['work', '🗾 資料ワーク']] : [])];
+      const tabs = [['lesson', '📘 単元ごと'], ['test', '📝 まとめテスト'], ...(window.SHAKAI_WORKS ? [['work', '🗾 資料ワーク']] : [])];
       view.innerHTML = `
         <h2 style="margin-top:4px">🖨 授業用プリント</h2>
         <p class="muted">アプリで練習する問題を、授業でそのまま配れる A4 のプリントにしました。どのプリントにも、後ろに<b>先生用の解答</b>がついています。</p>
@@ -121,15 +121,12 @@
         stage.style.height = (d.scrollHeight * scale) + 'px';
       };
       fit();
-      window.addEventListener('resize', fit, { once: true });
+      // 画面を回転したときなども、そのたびに合わせ直す（プレビューを出ているあいだだけ）
+      window.onresize = () => { if ($('#lp-doc')) fit(); else window.onresize = null; };
+      // 印刷用のクラスは印刷のときだけ効く。プレビュー中はつけたままにして、ブラウザのメニューから印刷しても崩れないように
+      document.body.classList.add('printing-lesson');
       $('#back').onclick = menu;
-      $('#doprint').onclick = () => {
-        document.body.classList.add('printing-lesson');
-        const done = () => { document.body.classList.remove('printing-lesson'); window.removeEventListener('afterprint', done); };
-        window.addEventListener('afterprint', done);
-        window.print();
-        setTimeout(done, 1000);
-      };
+      $('#doprint').onclick = () => window.print();
       window.scrollTo(0, 0);
     }
 

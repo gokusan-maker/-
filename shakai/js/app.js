@@ -117,6 +117,7 @@
     r.due = addDays(INTERVALS[r.box]);
   }
   function record(id, ok) {
+    if (!ITEM[id]) return;   // 問題データにないID（資料問題など）は記録しない
     applyResult(S.items[id] || (S.items[id] = blank()), ok);
     touchDay(1, { ok, field: UNIT[ITEM[id].unit].field });
     save();

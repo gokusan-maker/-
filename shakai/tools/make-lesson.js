@@ -5,6 +5,7 @@
  *   node tools/make-lesson.js --minutes 90
  *   node tools/make-lesson.js tests      … まとめテスト（地理・歴史・公民・総合）だけ
  *   node tools/make-lesson.js works      … 資料ワーク（白地図・年表・地図記号）だけ
+ *   node tools/make-lesson.js --check    … PDFは作らず、全部のプリント（テストA・B・C）がA4からはみ出さないか確かめる
  * アプリと同じ js/lesson.js でHTMLを組み立て、Playwright（Chromium）で A4 の PDF にする。
  * ========================================================================= */
 'use strict';
@@ -31,6 +32,7 @@ const args = process.argv.slice(2);
 const mi = args.indexOf('--minutes');
 const minutes = mi >= 0 ? +args[mi + 1] : 45;
 const only = args.filter((a, k) => !a.startsWith('--') && (mi < 0 || k !== mi + 1));
+const checkOnly = args.includes('--check');
 const TESTS = ctx.window.SHAKAI_PRINT_TESTS, testName = ctx.window.SHAKAI_TEST_PDF_NAME;
 const wantTests = !only.length || only.includes('tests');
 const wantWorks = !only.length || only.includes('works');
@@ -42,25 +44,35 @@ const FONT = '<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage();
+  const problems = [];
   const render = async (doc, rel, label) => {
     await page.setContent(`<!doctype html><html lang="ja"><head><meta charset="utf-8">${FONT}
       <style>@page { size: A4; margin: 0; } body { margin: 0; } ${L.CSS}${ctx.window.SHAKAI_WORKS_CSS || ''}</style></head>
       <body><div class="lp-doc">${doc.html}</div></body></html>`, { waitUntil: 'networkidle' });
     await page.evaluate(() => document.fonts.ready);
+    // どのページもA4（297mm）に収まっているか測る（はみ出すと白紙に近いページができる）
+    const heights = await page.$$eval('.lp-page', els => els.map(e => e.getBoundingClientRect().height / 3.7795));
+    heights.forEach((h, k) => { if (h > 297.5) problems.push(`${label}：${k + 1}ページ目が ${h.toFixed(0)}mm`); });
+    if (checkOnly) return;
     const out = path.join(ROOT, rel);
     fs.mkdirSync(path.dirname(out), { recursive: true });
     await page.pdf({ path: out, format: 'A4', printBackground: true, preferCSSPageSize: true });
     console.log(`${label} → ${rel}`);
   };
+  const versions = checkOnly ? ['A', 'B', 'C'] : [undefined];
   for (const { u, no } of targets) {
-    const doc = L.build(SH, { unitId: u.id, no, minutes, readings: ctx.window.SHAKAI_READINGS });
-    await render(doc, nameOf(no, u), `第${no}回 ${u.name}：練習${doc.practice}問・確認テスト${doc.test}問`);
+    for (const version of versions) {
+      const doc = L.build(SH, { unitId: u.id, no, minutes, version: version === 'A' ? undefined : version, readings: ctx.window.SHAKAI_READINGS });
+      await render(doc, nameOf(no, u), `第${no}回 ${u.name}${version ? `（${version}）` : ''}：練習${doc.practice}問・確認テスト${doc.test}問`);
+    }
   }
   if (wantTests) {
     for (const t of TESTS) {
       const items = t.fieldId ? SH.UNITS.filter(u => u.field === t.fieldId).flatMap(u => u.items) : SH.UNITS.flatMap(u => u.items);
-      const doc = L.build(SH, { mode: 'test', title: t.title, items, testN: t.n, fieldId: t.fieldId, seed: 'test-' + t.id, readings: ctx.window.SHAKAI_READINGS });
-      await render(doc, testName(t), `${t.title}：${doc.test}問`);
+      for (const version of versions) {
+        const doc = L.build(SH, { mode: 'test', title: t.title, items, testN: t.n, fieldId: t.fieldId, seed: 'test-' + t.id, version: version === 'A' ? undefined : version, readings: ctx.window.SHAKAI_READINGS });
+        await render(doc, testName(t), `${t.title}${version ? `（${version}）` : ''}：${doc.test}問`);
+      }
     }
   }
   if (wantWorks) {
@@ -69,4 +81,9 @@ const FONT = '<link href="https://fonts.googleapis.com/css2?family=BIZ+UDPGothic
     for (const w of W.LIST) await render(W.build(w.id, SHW), W.pdfName(w), w.title);
   }
   await browser.close();
+  if (problems.length) {
+    console.error('\nA4からはみ出したページがあります：\n' + problems.join('\n'));
+    process.exit(1);
+  }
+  if (checkOnly) console.log('すべてのプリントがA4に収まっています');
 })();

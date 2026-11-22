@@ -96,6 +96,7 @@ cd shakai && python3 -m http.server 8000   # → http://localhost:8000
 - 確認テストは **A・B・C の3種類**（問題と並びが変わる）。くり返しの授業や再テストに
 - **資料ワーク**：白地図（都道府県名・県庁所在地・地方区分の色分け）、年表（時代別4枚・年を書く）、地図記号の書きこみワーク。作成ずみ PDF は `shakai/print/資料ワーク/`
 - **まとめテスト**：地理・歴史・公民（各25問・1問4点）と総合テスト（50問・1問2点）。作成ずみ PDF は `shakai/print/まとめテスト/`
+- 問題の量に合わせてページを分けるので、どのプリントもA4に収まる（`npm run print:check` で全種類を確かめられる）
 - 問題データを変えたら `npm run print` で全部の PDF を作り直せる（Playwright が必要。`node tools/make-lesson.js h3` で1単元だけ、`npm run print:tests` でまとめテストだけ、`npm run print:works` で資料ワークだけ）
 
 ## 記録・その他

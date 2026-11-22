@@ -85,7 +85,9 @@
       }
       return { it, kind: 'write' };
     });
-    const pts = Math.round(100 / Math.max(1, test.length));
+    // 1問の点数（20問なら5点）。100点にならない問題数のときは、合計点をそのまま表示する
+    const pts = Math.max(1, Math.floor(100 / Math.max(1, test.length)));
+    const total = pts * test.length;
     const minutes = opts.minutes || 45;
     const plan = minutes >= 90
       ? [['導入・前回のふり返り', 10], ['要点の説明', 25], ['練習問題', 25], ['確認テスト', 20], ['答え合わせ・ふり返り', 10]]
@@ -118,7 +120,7 @@
         <div class="lp-block"><h2>授業の流れ（${minutes}分）</h2>
           <table class="lp-plan">${plan.map(([t, m], k) => `<tr><td>${k + 1}</td><td>${t}</td><td>${m}分</td><td class="chk">□</td></tr>`).join('')}</table></div>
         <div class="lp-block"><h2>得点</h2>
-          <div class="lp-scores"><div><span>練習問題</span><b>　　／${practice.length}問</b></div><div><span>確認テスト</span><b>　　／100点</b></div></div></div>
+          <div class="lp-scores"><div><span>練習問題</span><b>　　／${practice.length}問</b></div><div><span>確認テスト</span><b>　　／${total}点</b></div></div></div>
         <div class="lp-block"><h2>ふり返り</h2>
           <div class="lp-refl">
             <p>今日の自分は？　□ よくできた　□ できた　□ もう少し</p>
@@ -128,21 +130,41 @@
       </section>`;
 
     // 練習問題・確認テストは、1ページに収まる量ずつに分ける
-    const paginate = (qs, perPage) => { const out = []; for (let i = 0; i < qs.length; i += perPage) out.push(qs.slice(i, i + perPage)); return out; };
-    const practicePages = paginate(practice, 18).map((qs, pi, arr) => `
+    // 問題の高さ（mm）を文字数と選択肢から見積もって、A4に収まる分ずつページに分ける
+    const lines = (t, per) => Math.max(1, Math.ceil(String(t).length / per));
+    const estimate = (q, withPts) => {
+      const qh = lines(q.it.q + (withPts ? '（5点）' : ''), 31) * 5.8;
+      if (q.kind !== 'choice') return Math.max(10.5, qh) + 3.2;
+      const rows = [[0, 1], [2, 3]].map(([a, b]) => Math.max(lines(q.choices[a] || '', 15), lines(q.choices[b] || '', 15)) * 5.3);
+      return qh + rows[0] + rows[1] + 4;
+    };
+    const paginate = (qs, withPts) => {
+      const out = [[]];
+      let used = 14;   // 1ページ目は説明の行がある
+      qs.forEach(q => {
+        const h = estimate(q, withPts);
+        if (used + h > 236 && out[out.length - 1].length) { out.push([]); used = 0; }
+        out[out.length - 1].push(q); used += h;
+      });
+      return out;
+    };
+    const startNo = (pages, pi) => pages.slice(0, pi).reduce((a, p) => a + p.length, 0);
+    const pPages = paginate(practice, false);
+    const practicePages = pPages.map((qs, pi, arr) => `
       <section class="lp-page">
         ${head(`練習問題${arr.length > 1 ? `（${pi + 1}/${arr.length}）` : ''}`, `<span class="lp-score"><i></i>／${practice.length}</span>`)}
         ${pi === 0 ? '<p class="lp-lead">答えを右のらんに書きましょう。<b>ア〜エ</b>がある問題は記号で答えます。語句は<b>漢字で</b>書きましょう。</p>' : ''}
-        <ol class="lp-qs">${qs.map((q, k) => qItem(q, pi * 18 + k, false)).join('')}</ol>
+        <ol class="lp-qs">${qs.map((q, k) => qItem(q, startNo(pPages, pi) + k, false)).join('')}</ol>
       </section>`).join('');
-    const testPages = paginate(test, 12).map((qs, pi, arr) => `
+    const tPages = paginate(test, true);
+    const testPages = tPages.map((qs, pi, arr) => `
       <section class="lp-page">
-        ${head(`${testOnly ? 'テスト' : '確認テスト'}${vlabel}${arr.length > 1 ? `（${pi + 1}/${arr.length}）` : ''}`, '<span class="lp-score big"><i></i>／100点</span>')}
-        ${pi === 0 ? `<p class="lp-lead">教科書やノートを見ないで答えましょう。全${test.length}問・1問${pts}点。</p>` : ''}
-        <ol class="lp-qs">${qs.map((q, k) => qItem(q, pi * 12 + k, true)).join('')}</ol>
+        ${head(`${testOnly ? 'テスト' : '確認テスト'}${vlabel}${arr.length > 1 ? `（${pi + 1}/${arr.length}）` : ''}`, `<span class="lp-score big"><i></i>／${total}点</span>`)}
+        ${pi === 0 ? `<p class="lp-lead">教科書やノートを見ないで答えましょう。全${test.length}問・1問${pts}点（${total}点満点）。</p>` : ''}
+        <ol class="lp-qs">${qs.map((q, k) => qItem(q, startNo(tPages, pi) + k, true)).join('')}</ol>
       </section>`).join('');
 
-    const keyList = qs => `<ol class="lp-keys">${qs.map((q, k) => `<li><span class="lp-no">${k + 1}</span><span>${q.kind === 'choice' ? `<b>${q.key}</b>　` : ''}${ans(q.it)}${q.it.e ? `<em>${esc(q.it.e)}</em>` : ''}</span></li>`).join('')}</ol>`;
+    const keyList = (qs, from = 0) => `<ol class="lp-keys">${qs.map((q, k) => `<li><span class="lp-no">${from + k + 1}</span><span>${q.kind === 'choice' ? `<b>${q.key}</b>　` : ''}${ans(q.it)}${q.it.e ? `<em>${esc(q.it.e)}</em>` : ''}</span></li>`).join('')}</ol>`;
     const cut = '<div class="lp-cut">✂ ここから先は先生用（切りはなして使えます）</div>';
     const teacher = (testOnly ? '' : `
       <section class="lp-page lp-teacher">
@@ -150,11 +172,12 @@
         ${head('解答（先生用）')}
         <h2 class="lp-h2">練習問題</h2>${keyList(practice)}
       </section>`) + `
+      ${(test.length > 36 ? [test.slice(0, Math.ceil(test.length / 2)), test.slice(Math.ceil(test.length / 2))] : [test]).map((part, pi) => `
       <section class="lp-page lp-teacher">
-        ${testOnly ? cut : ''}
+        ${testOnly && pi === 0 ? cut : ''}
         ${head('解答（先生用）')}
-        <h2 class="lp-h2">${testOnly ? 'テスト' : '確認テスト'}${vlabel}（1問${pts}点）</h2>${keyList(test)}
-      </section>`;
+        <h2 class="lp-h2">${testOnly ? 'テスト' : '確認テスト'}${vlabel}（1問${pts}点）${pi ? '（つづき）' : ''}</h2>${keyList(part, pi ? Math.ceil(test.length / 2) : 0)}
+      </section>`).join('')}`;
 
     return {
       title, practice: testOnly ? 0 : practice.length, test: test.length,

@@ -31,7 +31,8 @@
         const ev = shuffle(EV)[0];
         const near = [];
         EV.slice().sort((a, b) => Math.abs(a.y - ev.y) - Math.abs(b.y - ev.y)).forEach(e => { if (e.y !== ev.y && !near.includes(e.y) && near.length < 3) near.push(e.y); });
-        return { id: `x-nengo-${i}`, unit: 'h6', q: `「${ev.t}」${/[るすつくぶむう]$/.test(ev.t) ? 'のは' : 'は'}何年？`, a: `${ev.y}年`, ch: near.map(y => `${y}年`), e: ev.goro || '' };
+        const unit = ev.y < 1185 ? 'h1' : ev.y < 1603 ? 'h2' : ev.y < 1868 ? 'h3' : ev.y < 1945 ? 'h4' : 'h5';
+        return { id: `x-nengo-${i}`, unit, q: `「${ev.t}」${/[るすつくぶむう]$/.test(ev.t) ? 'のは' : 'は'}何年？`, a: `${ev.y}年`, ch: near.map(y => `${y}年`), e: ev.goro || '' };
       });
       if (MAP && MAP.mapSvg) makers.push(i => {
         const p = shuffle(MAP.PREFS)[0];
@@ -211,6 +212,8 @@
       res.filter(r => !r.ok).forEach(r => { missByUnit[r.it.unit] = (missByUnit[r.it.unit] || 0) + 1; });
       const weakUnits = Object.entries(missByUnit).sort((a, b) => b[1] - a[1]).slice(0, 3);
       const wrong = res.filter(r => !r.ok);
+      // 資料問題（図やグラフの問題）は4択クイズでは出せないので、やり直しからは外す
+      const retry = wrong.filter(r => !r.it.synthetic);
 
       view.innerHTML = `
         <div class="card result-top">
@@ -230,7 +233,7 @@
         ${weakUnits.length ? `<div class="card advice"><b>📌 復習するとよい単元</b><br>
           ${weakUnits.map(([u, n]) => `${App.UNIT[u].icon} ${esc(App.UNIT[u].name)}（${n}問まちがい）`).join('<br>')}</div>` : ''}
         <div class="row" style="margin-top:14px">
-          ${wrong.length ? `<button class="btn" id="retry">まちがえた${wrong.length}問を復習</button>` : ''}
+          ${retry.length ? `<button class="btn" id="retry">まちがえた${retry.length}問を復習</button>` : ''}
           <button class="btn sub" id="back">テストのメニューへ</button>
         </div>
         <h2>答え合わせ</h2>
@@ -240,7 +243,7 @@
             ${!r.ok ? `<div class="yours">あなたの答え：${r.pick === null ? '（無回答）' : esc(r.pick)}</div>` : ''}
             ${!r.ok && r.it.e ? `<div class="muted">${esc(r.it.e)}</div>` : ''}</div></div>`).join('')}
         </div>`;
-      if (wrong.length) $('#retry').onclick = () => App.startSession('quiz', wrong.map(r => r.it), '実力テストの復習');
+      if (retry.length) $('#retry').onclick = () => App.startSession('quiz', retry.map(r => r.it), '実力テストの復習');
       $('#back').onclick = menu;
       window.scrollTo(0, 0);
     }

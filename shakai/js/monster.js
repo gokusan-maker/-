@@ -120,11 +120,12 @@
   const CLAY = '#d39466', CLAY_D = '#a5683f', CLAY_L = '#f0c299';
 
   function roomBg(id, w = 300, h = 220) {
-    const g = `<defs><linearGradient id="sky${uid}" x1="0" y1="0" x2="0" y2="1">`;
+    const gid = ++uid;
+    const g = `<defs><linearGradient id="sky${gid}" x1="0" y1="0" x2="0" y2="1">`;
     if (id === 'night') {
       const stars = Array.from({ length: 22 }, (_, k) => `<circle cx="${(k * 53) % w}" cy="${(k * 37) % (h * .55)}" r="${k % 3 ? 1 : 1.8}" fill="#fff" opacity="${.5 + (k % 4) / 8}"/>`).join('');
       return `${g}<stop offset="0" stop-color="#18224a"/><stop offset="1" stop-color="#3b3f7a"/></linearGradient></defs>
-        <rect width="${w}" height="${h}" fill="url(#sky${uid})"/>${stars}<circle cx="${w - 50}" cy="40" r="18" fill="#fff6c8"/><circle cx="${w - 43}" cy="35" r="16" fill="#18224a" opacity=".9"/>
+        <rect width="${w}" height="${h}" fill="url(#sky${gid})"/>${stars}<circle cx="${w - 50}" cy="40" r="18" fill="#fff6c8"/><circle cx="${w - 43}" cy="35" r="16" fill="#18224a" opacity=".9"/>
         <path d="M0 ${h * .78} Q${w * .3} ${h * .7} ${w * .6} ${h * .76} T${w} ${h * .74} V${h} H0Z" fill="#26304f"/>`;
     }
     const sky = id === 'castle' ? ['#ffd9b3', '#ffeedd'] : ['#9fd3f2', '#e3f4fb'];
@@ -142,7 +143,7 @@
         <g stroke="#7fb2d8" stroke-width=".8" opacity=".6">${[1, 2, 3, 4, 5].map(k => `<line x1="0" x2="${w}" y1="${k * 32}" y2="${k * 32}"/>`).join('')}</g>`;
     }
     return `${g}<stop offset="0" stop-color="${sky[0]}"/><stop offset="1" stop-color="${sky[1]}"/></linearGradient></defs>
-      <rect width="${w}" height="${h}" fill="url(#sky${uid})"/>
+      <rect width="${w}" height="${h}" fill="url(#sky${gid})"/>
       ${id === 'worldmap' ? '' : `<circle cx="50" cy="40" r="16" fill="#fff3b0" opacity=".9"/>`}
       ${scene}
       <path d="M0 ${h * .76} Q${w * .5} ${h * .68} ${w} ${h * .76} V${h} H0Z" fill="${id === 'castle' ? '#c9b48a' : '#8fcf7d'}"/>`;
@@ -286,7 +287,8 @@
       if (!ms.all && ms.done.length === ms.ids.length) {
         ms.all = true;
         m.coins += COIN_ALL;
-        setTimeout(() => { bubble(`今日のミッションぜんぶクリア！ 🪙+${COIN_ALL}`); gain(XP_ALL, null, 0); }, 3200);
+        gain(XP_ALL, null, 0);
+        setTimeout(() => bubble(`今日のミッションぜんぶクリア！ 🪙+${COIN_ALL}`), 3200);
       }
       App.save();
     }
@@ -354,7 +356,12 @@
       if (field && m.src[field] !== undefined) m.src[field] += xp;
       m.coins += coins;
       const after = levelInfo(m.xp).level;
+      if (after >= STAGES.find(s => s.id === 'adult').min && !m.branch) {
+        m.branch = ['geo', 'his', 'civ'].sort((a, b) => (m.src[b] || 0) - (m.src[a] || 0))[0];
+      }
       if (after > before) {
+        const key = formKey(stageOf(after), m.branch);
+        if (!m.seen.includes(key)) m.seen.push(key);
         m.coins += COIN_LEVEL * (after - before);
         setTimeout(() => celebrate(m, before, after), 500);
       }
@@ -362,8 +369,11 @@
     }
 
     // 問題をといたときの声かけ用に、連続正解・連続ミスを数える
-    let streak = 0, miss = 0;
+    let streak = 0, miss = 0, streakOwner = null, streakDay = null;
     App.on('study', ({ n, ok, field }) => {
+      // ユーザーを切りかえたときや日付がかわったときは、連続正解を数え直す
+      const owner = M();
+      if (owner !== streakOwner || streakDay !== App.today()) { streak = 0; miss = 0; streakOwner = owner; streakDay = App.today(); }
       progress('answered', n);
       if (ok === null) { gain(XP_OTHER * n, null, n); progress('material', n); return; }
       gain(ok ? XP_CORRECT : XP_WRONG, field, ok ? COIN_CORRECT : 0);
@@ -381,6 +391,10 @@
       }
     });
     App.on('goal', () => {
+      // 目標の問題数を変えて何度も達成しても、コインは1日1回だけ
+      const mg = M();
+      if (mg.lastGoalCoin === App.today()) return;
+      mg.lastGoalCoin = App.today();
       gain(0, null, COIN_GOAL);
       setTimeout(() => bubble(`目標たっせい！ コイン+${COIN_GOAL}`), 2400);
       // ハニーがおでかけ（1日1回）。帰ってくるとおみやげをくれる

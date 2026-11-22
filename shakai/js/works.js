@@ -94,6 +94,7 @@
   }
 
   /* ---------- 年表 ---------- */
+  const chunks = (a, n) => { const out = []; for (let i = 0; i < a.length; i += n) out.push(a.slice(i, i + n)); return out; };
   const ERAS = [
     { id: 'ancient', name: '古代（〜平安時代）', from: 0, to: 1184 },
     { id: 'medieval', name: '中世（鎌倉〜安土桃山時代）', from: 1185, to: 1602 },
@@ -107,11 +108,11 @@
     const row = (e, k, key) => `<tr><td class="no">${k + 1}</td><td class="yr">${key ? `${e.y}年` : '<span class="wk-ans"></span>年'}</td><td>${esc(e.t)}${key && e.goro ? `<small>💡${esc(e.goro)}</small>` : ''}</td></tr>`;
     return {
       title, summary: `できごと${evs.length}件の年を書く`,
-      html: `<section class="lp-page">${head(title, 'ワーク', `<span class="lp-score"><i></i>／${evs.length}</span>`)}
-          <p class="lp-lead">できごとが起こった年を書きましょう。できごとは古い順にならんでいます。</p>
-          <table class="wk-tl">${evs.map((e, k) => row(e, k, false)).join('')}</table></section>
-        <section class="lp-page lp-teacher">${cut}${head(title, '解答（先生用）')}
-          <table class="wk-tl key">${evs.map((e, k) => row(e, k, true)).join('')}</table></section>`
+      html: chunks(evs, 20).map((part, pi) => `<section class="lp-page">${head(title, 'ワーク', `<span class="lp-score"><i></i>／${evs.length}</span>`)}
+          ${pi === 0 ? '<p class="lp-lead">できごとが起こった年を書きましょう。できごとは古い順にならんでいます。</p>' : ''}
+          <table class="wk-tl">${part.map((e, k) => row(e, pi * 20 + k, false)).join('')}</table></section>`).join('') +
+        chunks(evs, 18).map((part, pi) => `<section class="lp-page lp-teacher">${pi === 0 ? cut : ''}${head(title, '解答（先生用）')}
+          <table class="wk-tl key">${part.map((e, k) => row(e, pi * 18 + k, true)).join('')}</table></section>`).join('')
     };
   }
 

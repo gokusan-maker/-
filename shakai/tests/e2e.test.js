@@ -145,6 +145,15 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
       if (!/何年？|地図で色のついている|地図記号は|雨温図は/.test(await p.textContent('.review'))) throw new Error('資料問題が入っていない');
       await p.click('#back'); await p.click('#home');
     }
+    // 何も答えずに提出 → まちがえた問題の復習（資料問題は入らない）を最後までとけること
+    await p.click('[data-mode="x:exam"]'); await p.click('[data-c=mini]'); await p.click('#submit');
+    await p.waitForSelector('.field-scores');
+    const rn = +(await p.textContent('#retry')).match(/\d+/)[0];
+    if (rn >= 15) throw new Error('やり直しに資料問題が入っている（' + rn + '問）');
+    await p.click('#retry');
+    for (let i = 0; i < rn; i++) { await p.click('.choice[data-k="0"]'); await p.click('#next'); }
+    await p.waitForSelector('.result-top');
+    await p.click('#home');
     await p.click('[data-mode="x:exam"]');
     if (!(await p.$('.exam-chart'))) throw new Error('成績グラフがない');
     // 途中でホームにもどってもタイマーが画面を書きかえないこと

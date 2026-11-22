@@ -8,6 +8,7 @@
     "print": "node tools/make-lesson.js",
     "print:tests": "node tools/make-lesson.js tests",
     "print:works": "node tools/make-lesson.js works",
+    "print:check": "node tools/make-lesson.js --check",
     "start": "python3 -m http.server 8000"
   }
 }
