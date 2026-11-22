@@ -293,6 +293,7 @@
       App.save();
     }
     const night = () => { const h = new Date().getHours(); return h >= 22 || h < 6; };
+    const weekend = () => { const d = new Date().getDay(); return d === 0 || d === 6; };
     const lovedDays = () => Object.keys(App.state.days || {}).length;
     const hearts = () => Math.min(5, 1 + Math.floor(lovedDays() / 4));
 
@@ -309,10 +310,13 @@
     };
     const pick = a => a[Math.floor(Math.random() * a.length)];
 
+    const shown = () => App.state.settings.monster !== false;
     function bubble(text) {
+      if (!shown()) return;
       const m = M();
       const el = document.createElement('div');
       el.className = 'mon-bubble';
+      el.setAttribute('role', 'status');
       el.innerHTML = `<svg viewBox="-60 -150 120 160" class="mon-mini">${haniwa(m)}</svg><span>${esc(text)}</span>`;
       document.body.appendChild(el);
       setTimeout(() => el.classList.add('out'), 2200);
@@ -376,7 +380,7 @@
       if (owner !== streakOwner || streakDay !== App.today()) { streak = 0; miss = 0; streakOwner = owner; streakDay = App.today(); }
       progress('answered', n);
       if (ok === null) { gain(XP_OTHER * n, null, n); progress('material', n); return; }
-      gain(ok ? XP_CORRECT : XP_WRONG, field, ok ? COIN_CORRECT : 0);
+      gain((ok ? XP_CORRECT : XP_WRONG) * (weekend() ? 2 : 1), field, ok ? COIN_CORRECT : 0);
       if (ok) {
         streak++; miss = 0;
         progress('correct', 1);
@@ -411,6 +415,7 @@
     /* ===================== ホームのカード ===================== */
     App.registerHomeCard({
       html: () => {
+        if (!shown()) return '';
         const m = M(), li = levelInfo(m.xp), st = stageOf(li.level);
         return `<button class="card mon-card" id="mon-card">
           <svg viewBox="-70 -165 140 172" class="mon-card-art">${haniwa(m, { sleeping: night(), crack: st.id === 'egg' && li.into >= li.need * .6 })}</svg>
@@ -418,7 +423,7 @@
             <span class="mon-card-name"><b>${esc(m.name)}</b> <span class="muted">${esc(formName(st, m.branch))}</span></span>
             <span class="mon-card-lv">Lv${li.level}<span class="bar"><i style="width:${li.into / li.need * 100}%"></i></span></span>
             <span class="mon-card-say">${m.trip ? '🎁 おみやげがあるよ！' : esc(night() ? pick(VOICE.night) : pick(VOICE.hello))}</span>
-            <span class="mon-card-ms">📋 今日のミッション ${mission().done.length}/3</span>
+            <span class="mon-card-ms">📋 今日のミッション ${mission().done.length}/3${weekend() ? '　<b class="mon-wk">週末はXP2倍！</b>' : ''}</span>
           </span>
           <span class="mon-coin">🪙 ${m.coins}</span>
         </button>`;
@@ -458,7 +463,7 @@
           <div class="mon-lv">Lv${li.level}<span class="bar"><i style="width:${li.into / li.need * 100}%"></i></span><small>${li.into}/${li.need}</small></div>
           <div class="muted">${next ? `Lv${next.min}で${next.id === 'adult' ? '進化（いちばん勉強した分野で姿がかわる）' : `「${next.name}」に進化`}` : 'さいごの姿まで育ったよ！'}</div>
           <div class="mon-src">${['geo', 'his', 'civ'].map(k => `<span><span class="dot ${k}"></span>${BRANCHES[k].field} ${m.src[k] || 0}XP</span>`).join('')}</div>
-          <p class="muted" style="margin:6px 0 0">正解で XP+${XP_CORRECT}・🪙+${COIN_CORRECT}、1日の目標で 🪙+${COIN_GOAL}（ハニーがおでかけ）、バッジで 🪙+${COIN_BADGE}</p>
+          <p class="muted" style="margin:6px 0 0">正解で XP+${XP_CORRECT}（土日は2倍）・🪙+${COIN_CORRECT}、1日の目標で 🪙+${COIN_GOAL}（ハニーがおでかけ）、バッジで 🪙+${COIN_BADGE}</p>
         </div>
         <div class="card mon-missions">
           <b>📋 今日のミッション</b>${ms.all ? '<span class="tag geo">ぜんぶクリア！</span>' : `<span class="muted">1つ🪙${COIN_MISSION}・ぜんぶで🪙${COIN_ALL}とXP${XP_ALL}</span>`}

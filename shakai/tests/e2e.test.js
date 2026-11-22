@@ -189,7 +189,12 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     if (await p.$$eval('.sheet-list li', x => x.length) !== 10) throw new Error('プリントの問題数');
     await p.click('#home');
     await p.click('#btn-settings'); await p.click('#goal [data-g="10"]'); await p.click('#home');
-    await p.click('#btn-settings'); await p.click('[data-key=big]'); await p.click('[data-key=big]'); await p.click('#home');
+    await p.click('#btn-settings'); await p.click('[data-key=big]'); await p.click('[data-key=big]');
+    // 相棒モンスターを非表示にするとホームのカードが消え、もどすと出る
+    await p.click('[data-key=monster]'); await p.click('#home');
+    if (await p.$('#mon-card')) throw new Error('非表示にしても相棒カードが出る');
+    await p.click('#btn-settings'); await p.click('[data-key=monster]'); await p.click('#home');
+    if (!(await p.$('#mon-card'))) throw new Error('表示にもどしても相棒カードが出ない');
   });
   await step('ユーザーの切りかえとバッジ', async () => {
     p.removeAllListeners('dialog');
@@ -268,12 +273,16 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
       await p.click(`.choice[data-k="${k}"]`); await p.click('#next');
     }
     await p.waitForTimeout(700);
+    // 土日はXPが2倍になる
+    const wk = await p.evaluate(() => [0, 6].includes(new Date().getDay()));
+    const wantXp = wk ? 200 : 100;
+    const wantLv = await p.evaluate(x => window.SHAKAI_MONSTER.levelInfo(x).level, wantXp);
     const lv = await p.evaluate(() => window.SHAKAI_MONSTER.levelInfo(JSON.parse(localStorage['shakai-drill-v1']).ext.monster.xp).level);
-    if (lv !== 4) throw new Error('レベルが ' + lv);
+    if (lv !== wantLv) throw new Error('レベルが ' + lv + '（期待 ' + wantLv + '）');
     await p.evaluate(() => { const ov = document.querySelector('.mon-overlay'); if (ov) ov.click(); });
     const m = await p.evaluate(() => JSON.parse(localStorage['shakai-drill-v1']).ext.monster);
     // 目標達成やバッジのコインが加わることもあるので、最低額だけを確かめる
-    if (m.xp !== 100 || m.coins < 100) throw new Error('XP・コインの計算 ' + JSON.stringify({ xp: m.xp, coins: m.coins }));
+    if (m.xp !== wantXp || m.coins < 50 + 20 + 10 * (wantLv - 1)) throw new Error('XP・コインの計算 ' + JSON.stringify({ xp: m.xp, coins: m.coins }));
     await p.evaluate(() => { const S = JSON.parse(localStorage['shakai-drill-v1']); S.ext.monster.coins = 500; localStorage['shakai-drill-v1'] = JSON.stringify(S); });
     await p.goto(URL); await p.click('#mon-card');
     await p.click('[data-food=onigiri]');

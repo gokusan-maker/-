@@ -42,7 +42,7 @@
     best: {},
     ext: {},
     pref: { units: UNITS.map(u => u.id), count: 10 },
-    settings: { sound: true, big: false, goal: 20 }
+    settings: { sound: true, big: false, goal: 20, monster: true }
   });
   // きょうだいなどで使い分けられるよう、ユーザーごとに記録を分けて保存する
   const keyOf = id => id === 'p1' ? STORE_KEY : `${STORE_KEY}:${id}`;
@@ -1092,6 +1092,7 @@
       <h2>表示と音</h2>
       ${sw('sound', '効果音', '正解・不正解のときに音を鳴らす')}
       ${sw('big', '文字を大きくする', '問題や選択肢を大きく表示する')}
+      ${sw('monster', '相棒モンスターを表示する', 'オフにすると、ホームのカードや声かけを出さない（ハニーは見えないところで育ち続けます）')}
       <div class="card setting col">
         <span><b>1日の目標</b><br><span class="muted">1日にとく問題数の目標。達成するとお知らせします。</span></span>
         <div class="seg" id="goal">${[0, 10, 20, 30, 50].map(g => `<button data-g="${g}" class="${S.settings.goal === g ? 'on' : ''}">${g ? g + '問' : 'なし'}</button>`).join('')}</div>
