@@ -334,7 +334,15 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
     for (let i = 0; i < 3; i++) { await p.click('#cl-next'); if (!(await p.$('.cl-c.ok'))) throw new Error('正解が表示されない'); await p.click('#cl-next'); }
     const after = await p.evaluate(() => Object.keys(JSON.parse(localStorage['shakai-drill-v1']).items).length);
     if (after !== before) throw new Error('授業で映すで学習記録がふえた');
-    await p.click('#cl-close'); await p.click('#cl-kind [data-v=flash]');
+    await p.click('#cl-close');
+    for (const d of ['map', 'cap', 'sym', 'climate', 'nengo']) {
+      await p.click(`.cl-deck[data-d=${d}]`);
+      if (d !== 'nengo' && !(await p.$('.cl-fig'))) throw new Error('授業で映す：資料の図がない ' + d);
+      if (await p.$$eval('.cl-c', x => x.length) !== 4) throw new Error('授業で映す：資料の選択肢が4つない ' + d);
+      await p.click('#cl-next'); if (!(await p.$('.cl-c.ok'))) throw new Error('授業で映す：資料の正解が出ない ' + d);
+      await p.click('#cl-close');
+    }
+    await p.click('#cl-kind [data-v=flash]');
     await p.click('.pr-tabs [data-tab=test]');
     await p.click('.pr-tabs [data-tab=lesson]'); await p.click('#ver [data-v=A]');
     await p.click('#home');

@@ -649,3 +649,11 @@ body.cl-on #view { padding: 0; }
 .cl-nav { display: flex; gap: 2vw; }
 .cl-nav .btn { flex: 1; min-height: clamp(52px, 8vh, 84px); font-size: clamp(18px, 2.4vw, 30px); }
 @media print { body.cl-on .cl-nav, body.cl-on .cl-btn { display: none; } }
+
+.cl-q.small { font-size: clamp(20px, 3.2vw, 40px); }
+.cl-fig { display: flex; justify-content: center; }
+.cl-fig .jmap { height: 40vh; width: auto; max-width: 100%; }
+.cl-fig .jmap .tile { cursor: default; }
+.cl-sym { height: clamp(110px, 30vh, 260px); width: auto; color: var(--ink); }
+.cl-chart { height: 40vh; }
+.cl-chart .ondo { height: 100%; width: auto; }
