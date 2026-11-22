@@ -158,4 +158,5 @@
 
     App.registerMode({ id: 'climate', icon: '☔', name: '雨温図', desc: 'グラフから6つの気候を見分ける', start: menu });
   });
+  window.SHAKAI_CLIMATE = { CITIES, chart };
 })();

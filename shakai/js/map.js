@@ -342,5 +342,5 @@
     App.registerMode({ id: 'map', icon: '🗾', name: '白地図', desc: '都道府県の位置・県庁所在地・地方区分', start: menu });
   });
 
-  window.SHAKAI_MAP = { PREFS, REGIONS };
+  window.SHAKAI_MAP = { PREFS, REGIONS, mapSvg, dist };
 })();

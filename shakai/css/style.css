@@ -615,3 +615,8 @@ mark { background: #ffe58a; color: #222; border-radius: 3px; padding: 0 1px; }
 .ms-item b { font-size: 12px; }
 .ms-item .muted { font-size: 11px; }
 .ms-item.unseen { opacity: .5; }
+
+/* 実力テストの資料問題 */
+.ex-map { margin-top: 8px; }
+.ex-map .jmap .tile { cursor: default; }
+.ex-chart { margin-top: 8px; }

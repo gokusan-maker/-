@@ -1,6 +1,6 @@
 /* =========================================================================
  * 実力テスト
- * 地理・歴史・公民から配分して出題する、本番形式のテスト。
+ * 地理・歴史・公民から配分して出題する、本番形式のテスト。2割ほどは白地図・年号・地図記号・雨温図の資料問題。
  * 解答中は正解を表示せず、問題を行き来して見直してから提出する。
  * 提出すると100点満点で採点し、分野別の得点と過去の成績を表示する。
  * ========================================================================= */
@@ -23,7 +23,48 @@
     const stop = () => { if (timer) { clearInterval(timer); timer = null; } };
 
     // 分野の割合を守りつつ、単元がかたよらないように順番に1問ずつ取る
+    // 資料問題（白地図・年号・地図記号・雨温図）。本番の入試のように、図を見て答える問題をまぜる
+    function material(k) {
+      const MAP = window.SHAKAI_MAP, SYM = window.SHAKAI_SYMBOLS, CL = window.SHAKAI_CLIMATE, EV = window.SHAKAI.EVENTS;
+      const makers = [];
+      if (EV) makers.push(i => {
+        const ev = shuffle(EV)[0];
+        const near = [];
+        EV.slice().sort((a, b) => Math.abs(a.y - ev.y) - Math.abs(b.y - ev.y)).forEach(e => { if (e.y !== ev.y && !near.includes(e.y) && near.length < 3) near.push(e.y); });
+        return { id: `x-nengo-${i}`, unit: 'h6', q: `「${ev.t}」${/[るすつくぶむう]$/.test(ev.t) ? 'のは' : 'は'}何年？`, a: `${ev.y}年`, ch: near.map(y => `${y}年`), e: ev.goro || '' };
+      });
+      if (MAP && MAP.mapSvg) makers.push(i => {
+        const p = shuffle(MAP.PREFS)[0];
+        const near = MAP.PREFS.filter(x => x !== p).sort((a, b) => MAP.dist(a, p) - MAP.dist(b, p)).slice(0, 5);
+        return { id: `x-map-${i}`, unit: 'g1', q: '地図で色のついている都道府県は？', qHtml: `<div class="ex-map">${MAP.mapSvg({ labels: false, highlight: p.i, region: false })}</div>`, a: p.name, ch: shuffle(near).slice(0, 3).map(x => x.name), e: `県庁所在地は${p.cap}。${p.note}` };
+      });
+      if (SYM) makers.push(i => {
+        const s = shuffle(SYM)[0];
+        return { id: `x-sym-${i}`, unit: 'g8', q: 'この地図記号は何を表している？', qHtml: `<div class="sym-big"><svg class="sym" viewBox="0 0 100 100" aria-hidden="true">${s.svg}</svg></div>`, a: s.name, ch: shuffle(SYM.filter(x => x !== s)).slice(0, 3).map(x => x.name), e: s.note };
+      });
+      if (CL) makers.push(i => {
+        const c = shuffle(CL.CITIES)[0];
+        return { id: `x-cl-${i}`, unit: 'g3', q: 'この雨温図は、どの気候のもの？', qHtml: `<div class="ex-chart">${CL.chart(c)}</div>`, a: c.climate, ch: shuffle(CL.CITIES.filter(x => x !== c)).slice(0, 3).map(x => x.climate), e: `${c.city}。${c.point}` };
+      });
+      if (!makers.length) return [];
+      const order = shuffle(makers);
+      const out = [], used = new Set();
+      for (let i = 0; out.length < k && i < k * 5; i++) {
+        const it = order[i % order.length](i);
+        if (used.has(it.q + it.a)) continue;   // 同じ問題が2回出ないように
+        used.add(it.q + it.a);
+        out.push({ ...it, synthetic: true });
+      }
+      return out;
+    }
+
     function compose(n) {
+      // 2割ほどを資料問題にする（ミニ3問・標準6問・ロング10問）
+      const k = Math.round(n * .2);
+      const mat = material(k);
+      return shuffle(composeItems(n - mat.length).concat(mat));
+    }
+    function composeItems(n) {
       const out = [];
       FIELDS.forEach(f => {
         const k = Math.round(n * RATIO[f.id]);
@@ -104,7 +145,8 @@
           <span class="count exam-time" id="exam-time">${fmt(ex.end - Date.now())}</span>
         </div>
         <div class="exam-meta"><b>第${ex.i + 1}問</b> / ${ex.items.length}問　<span class="muted">解答ずみ ${answered}問</span></div>
-        ${App.questionCard(it)}
+        ${it.qHtml ? `<div class="card question"><span class="tag ${App.UNIT[it.unit].field}">${App.FIELD[App.UNIT[it.unit].field].name}</span> <span class="muted">資料問題</span>
+          <p class="qt">${esc(it.q)}</p>${it.qHtml}</div>` : App.questionCard(it)}
         <div class="choices">
           ${opts.map((o, k) => `<button class="choice ${ex.ans[ex.i] === k ? 'picked' : ''}" data-k="${k}"><span class="no">${k + 1}</span><span>${esc(o)}</span></button>`).join('')}
         </div>
@@ -148,7 +190,8 @@
         const pick = ex.ans[k] === null ? null : ex.opts[k][ex.ans[k]];
         return { it, pick, ok: pick === it.a };
       });
-      res.forEach(r => App.record(r.it.id, r.ok));
+      // 資料問題は記録（復習の予定）の対象外。解いた数と相棒のXPだけ数える
+      res.forEach(r => r.it.synthetic ? App.touchDay(1, { ok: r.ok, field: App.UNIT[r.it.unit].field }) : App.record(r.it.id, r.ok));
       const ok = res.filter(r => r.ok).length;
       const score = Math.round(ok / res.length * 100);
       const fields = {};

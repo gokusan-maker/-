@@ -142,6 +142,7 @@ const URL = 'file://' + path.join(__dirname, '..', 'index.html');
       for (let i = 0; i < 14; i++) { await p.click('.choice[data-k="0"]'); await p.waitForTimeout(250); }
       await p.click('#submit');   // 1問残して提出（確認ダイアログは自動でOK）
       await p.waitForSelector('.field-scores');
+      if (!/何年？|地図で色のついている|地図記号は|雨温図は/.test(await p.textContent('.review'))) throw new Error('資料問題が入っていない');
       await p.click('#back'); await p.click('#home');
     }
     await p.click('[data-mode="x:exam"]');
