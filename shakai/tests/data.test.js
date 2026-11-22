@@ -100,7 +100,7 @@ PREFS.forEach(p => {
 // 4択の答えとして、問題データの県庁所在地と白地図の県庁所在地が食いちがっていないか
 all.filter(it => /の(県|道|府)庁所在地は？$/.test(it.q)).forEach(it => {
   const name = it.q.replace(/の(県|道|府)庁所在地は？$/, '');
-  const p = PREFS.find(x => x.name === name);
+  const p = PREFS.find(x => x.name === name || name.endsWith('、' + x.name));
   check(p && p.cap === it.a, `${it.id}: 白地図の県庁所在地と食いちがう (${name})`);
 });
 
